@@ -1,2 +1,2 @@
-# Simulación y optimización de procesos de fermentación
-Este repositorio contiene el código en R usado para la simulación y optimización de procesos de fermentación
+# Simulation and optimization of fermentation processes
+This repository contains the R code used for the simulation and optimization of fermentation processes
