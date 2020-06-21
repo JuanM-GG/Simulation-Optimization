@@ -15,7 +15,7 @@ library(tidyverse)
 model <-function(time, parms, state) {
         with(as.list(c(parms,state)),{
                 
-                # kinetic reactions 
+                # reaction kinetic rates 
                 v <- vmax*s/(ks+s)*kp/(kp+p)
                 
                 # differential equations
