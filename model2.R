@@ -24,3 +24,4 @@ model <-function(time, parms, state) {
 
 # Set parameters
 p <- c(vmax = 0.5, ks = 80, yxs = 0.8, ypx = 12, kp = 180)
+ 
