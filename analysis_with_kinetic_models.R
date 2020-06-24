@@ -12,17 +12,17 @@ library(tidyverse)
 # Establish functions ###################################################
 
 # Function that simulates a model
-simMod <- function(parms) {
-        results <- ode(y = sdat,
+simMod <- function(s,p) {
+        results <- ode(y = s,
                       times = seq(0,60,4),
                       func = model,
                       parms = p,
                       method = "rk4")
         results <- as.data.frame(results)
         ggplot(data = results) + 
-                geom_line(mapping = aes(x = time, y = s, color = "s")) + 
-                geom_line(mapping = aes(x = time, y = x, color = "x")) +
-                geom_line(mapping = aes(x = time, y = p,color = "p")) + 
+                geom_line(mapping = aes(x = time, y = s, color = "s"), size=1.5) + 
+                geom_line(mapping = aes(x = time, y = x, color = "x"), size=1.5) +
+                geom_line(mapping = aes(x = time, y = p,color = "p"), size=1.5) + 
                 labs(title = "simulation", x = "time (h)", y = "Density (g/L)")+
                 theme_bw()
 }
