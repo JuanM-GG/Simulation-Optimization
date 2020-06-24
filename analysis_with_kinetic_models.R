@@ -1,5 +1,5 @@
 # Data analysis using kinetic models
-# Juan Manuel Gutiérrez García
+# Juan Manuel GutiÃ©rrez GarcÃ­a
 # Note: This script is used to apply different models on all the 
 # data sets and determine which model is the best for each one 
 
@@ -88,4 +88,4 @@ getComp <- function(optparms) {
                 geom_point(data = data, mapping = aes(x = time, y = p,color = "p")) +
                 labs(title = "simulation", x = "time (h)", y = "Density (g/L)")+
                 theme_bw()
-}
+} 
