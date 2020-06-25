@@ -11,6 +11,10 @@ library(tidyverse)
 
 # Establish functions ###################################################
 
+
+# Values required
+s <- c(x=0.2,p=0,s=40)
+
 # Function that simulates a model
 simMod <- function(s,p) {
         results <- ode(y = s,
@@ -27,17 +31,6 @@ simMod <- function(s,p) {
                 theme_bw()
 }
 
-# Fitness function
-costFun <- function(parms) {
-        names(parms) <- names(p)
-        simOut <- ode(y = sdat,
-                      times = seq(0,60,4),
-                      func = model,
-                      parms = parms,
-                      method = "rk4")
-        modCost(simOut,data)$model
-}
-
 # Function to show changes of sustrate, product and biomass on time
 showPlot <- function(data) {
         ggplot(data = data) + 
@@ -49,10 +42,7 @@ showPlot <- function(data) {
 }
 
 # Function the get optimized parameters
-getParms <- function(data) {
-        
-        # Set initial conditions
-        sdat <- c(x=data$x[1],p = data$p[1], s = data$s[1])
+getParms <- function() {
         
         # Using GA to get parameters
         parmsOpt <- ga(type = 'real-valued',
@@ -63,21 +53,38 @@ getParms <- function(data) {
                        pcrossover = 0.8,
                        pmutation = 0.1,
                        names = names(p),
-                       maxiter = 50)
+                       maxiter = 100,
+                       maxFitness = -2000)
+        
         newparms <- parmsOpt@solution %>% as.data.frame() %>% unlist()
+        
         return(list("optimized_parameters" = newparms,
-                    "fitness value" = parmsOpt@fitnessValue))
+                    "fitness_value" = parmsOpt@fitnessValue))
+        
+}
+
+# Fitness function
+costFun <- function(parms) {
+        
+        names(parms) <- names(p)
+        simOut <- ode(y = s,
+                      times = seq(0,60,4),
+                      func = model,
+                      parms = parms,
+                      method = "rk4")
+        modCost(simOut,data)$model
 }
 
 # Function to compare simulation with optimized parameters and data
 getComp <- function(optparms) {
+        
         fitness <- ode(y = sdat,
                        times = seq(0,60,4),
                        func = model,
                        parms = optparms,
                        method = "rk4")
+        
         fitness <- as.data.frame(fitness)
-        head(fitness)
         
         ggplot(data = fitness) + 
                 geom_line(mapping = aes(x = time, y = s, color = "s")) + 
@@ -88,4 +95,4 @@ getComp <- function(optparms) {
                 geom_point(data = data, mapping = aes(x = time, y = p,color = "p")) +
                 labs(title = "simulation", x = "time (h)", y = "Density (g/L)")+
                 theme_bw()
-} 
+}
