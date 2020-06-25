@@ -2,11 +2,16 @@ library(shiny)
 library(shinydashboard)
 library(markdown)
 library(xlsx)
+library(shinybusy)
+
 source("analysis_with_kinetic_models.R")
 
 ui = navbarPage("Fermentation Analysis",
+                
                         
                         tabPanel("Simulation",
+                                 
+                                 add_busy_spinner(spin = "fading-circle"),
                                  
                                  sidebarLayout(
                                          
@@ -108,6 +113,8 @@ ui = navbarPage("Fermentation Analysis",
                         
                         tabPanel("Optimization",
                                  
+                                 add_busy_spinner(spin = "fading-circle"),
+                                 
                                  sidebarLayout(
                                          
                                          sidebarPanel(
@@ -135,6 +142,13 @@ ui = navbarPage("Fermentation Analysis",
                                                          ),
                                                          column(8,offset = 1,
                                                                 plotOutput("plot2"))
+                                                 ),
+                                                 fluidRow(
+                                                         column(3,
+                                                                tableOutput("parmsOpt")
+                                                         ),
+                                                         column(8, offset = 1,
+                                                                plotOutput("plotResult"))  
                                                  )
                                                  
                                          )
@@ -144,7 +158,11 @@ ui = navbarPage("Fermentation Analysis",
                         
                         navbarMenu("Statistic Analysis",
                                    
+                                   
+                                   
                                    tabPanel("t-student",
+                                            
+                                            h3("t-student analysis"),
                                             
                                             sidebarLayout(
                                                     
@@ -166,6 +184,8 @@ ui = navbarPage("Fermentation Analysis",
                                    
                                    tabPanel("ANOVA",
                                             
+                                            h3("ANOVA analysis"),
+                                            
                                             sidebarLayout(
                                                     
                                                     sidebarPanel(
@@ -183,6 +203,8 @@ ui = navbarPage("Fermentation Analysis",
                                    ),
                                    
                                    tabPanel("Linear regression",
+                                            
+                                            h3("Linear regression analysis"),
                                    
                                                      sidebarLayout(
                                                     
@@ -204,6 +226,8 @@ ui = navbarPage("Fermentation Analysis",
                                    ),
                                    
                                    tabPanel("Multiple regression",
+                                            
+                                            h3("Multiple regression analysis"),
                                    
                                                      sidebarLayout(
                                             
@@ -262,7 +286,7 @@ server = function(input, output, session) {
                 
                 # This section is for load the model the user request and make the simulation, also, plot it 
                 # Initial condition entered by the user
-                s <- reactive({c(x = input$xint1, p = input$pint1, s = input$sint1)})
+                s1 <- reactive({c(x = input$xint1, p = input$pint1, s = input$sint1)})
                 
                 # Set parameters for the model
                 rv <- reactiveValues(p = vector(mode = "numeric"))
@@ -324,7 +348,7 @@ server = function(input, output, session) {
                         
                         
                         
-                        simMod(s(), rv$p)
+                        simMod(s1(), rv$p)
                 })
                 
                 
@@ -388,11 +412,74 @@ server = function(input, output, session) {
                         
                 })
                 
+                # This section is for plot the data
                 output$plot2 <- renderPlot({
+                        
                         req(input$file2)
                         
                         showPlot(df())
+                        
+                        
                 })
+                
+                # This code is for get the optimized parameter
+                
+                myresults <- eventReactive(input$act2, {
+                        
+                        if (input$mod2 == "model_1") {
+                                
+                                source("model1.R")
+                                
+                        }
+                        
+                        else if(input$mod2 == "model_2") {
+                                
+                                source("model2.R")
+                        }
+                        
+                        else if(input$mod2 == "model_3") {
+                                
+                                source("model3.R") 
+                        }
+                        
+                        else if(input$mod2 == "model_4") {
+                                
+                                source("model4.R")  
+                        }
+                        
+                        else {
+                                
+                                source("model5.R")  
+                        }
+                        
+                         
+                        # Update value of data according to the input file
+                        data <<- df()
+                        
+                        # Update value of initial conditions according to the input file
+                        s <<- c(x = df()$x[1], p = df()$p[1], s = df()$s[1])
+                        # Get optimized parameters
+                        getParms()
+
+                        
+                })
+                
+                # Show optimized parameters
+                output$parmsOpt <- renderTable({
+                        
+                        
+                        # Compare simulation with optimized parameters with data
+                        data.frame("Parameter" = c(names(myresults()$optimized_parameters),"fitness_value"),
+                                   "Results" = c(myresults()$optimized_parameters,myresults()$fitness_value))
+                        
+                })
+                
+                # Plot results of optimization
+                output$plotResult <- renderPlot({
+                        
+                        getComp(myresults()$optimized_parameters)
+                })
+                
                 
                 
 }
@@ -400,5 +487,4 @@ server = function(input, output, session) {
 
 
 shinyApp(ui, server)
-                                           
-                                           
+                                 
