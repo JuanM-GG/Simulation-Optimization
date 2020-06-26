@@ -3,10 +3,11 @@ library(shinydashboard)
 library(markdown)
 library(xlsx)
 library(shinybusy)
+library(shinythemes)
 
 source("analysis_with_kinetic_models.R")
 
-ui = navbarPage("Fermentation Analysis",
+ui = navbarPage("Fermentation Analysis", theme = shinytheme("spacelab"),
                 
                         
                         tabPanel("Simulation",
@@ -162,21 +163,41 @@ ui = navbarPage("Fermentation Analysis",
                                    
                                    tabPanel("t-student",
                                             
+                                            add_busy_spinner(spin = "fading-circle"),
+                                            
                                             h3("t-student analysis"),
                                             
                                             sidebarLayout(
                                                     
                                                     sidebarPanel(
                                                             
-                                                            fileInput(inputId = "file31",label = "Enter the data",multiple = TRUE),
+                                                            fileInput(inputId = "file3",label = "Enter the data",multiple = TRUE),
                                                             
-                                                            checkboxInput(inputId = "check31",label = "Header",value = TRUE)
+                                                            checkboxInput(inputId = "check3",label = "Head", value = TRUE),
+                                                            
+                                                            selectInput(inputId = "sheet3",label = "Select sheet",
+                                                                        choices = list("1","2","3","4"),selected = "1"),
+                                                            
+                                                            actionButton("act3", "Make t-test")
+                                                            
                                                     ),
                                                     
                                                     mainPanel(
                                                             
-                                                            
-                                                            
+                                                            fluidRow(
+                                                                    
+                                                                    column(3,
+                                                                           tableOutput("content3")
+                                                                    ),
+                                                                    column(8, offset = 1,
+                                                                           
+                                                                           plotOutput("plot3")
+                                                                           )
+                                                            ),
+                                                            fluidRow(
+                                                                    verbatimTextOutput("t_test")
+                                                            )
+                                                
                                                     )
                                             )
                                             
@@ -372,7 +393,7 @@ server = function(input, output, session) {
                                 withMathJax(
                                         helpText('Model 3 (Monod with product partially linked to growth): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x$$'),
                                         helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x$$'),
-                                        helpText('$$\\frac{dp}{dt} = \\beta*v_{max}*\\frac{s}{k_{s}+s}*x + \\alpha*x$$')
+                                        helpText('$$\\frac{dp}{dt} = \\alpha*v_{max}*\\frac{s}{k_{s}+s}*x + \\beta*x$$')
                                 )
                         }
                         else if (input$mod1 == "model_4") {
@@ -454,12 +475,14 @@ server = function(input, output, session) {
                         
                          
                         # Update value of data according to the input file
-                        data <<- df()
+                        
                         
                         # Update value of initial conditions according to the input file
-                        s <<- c(x = df()$x[1], p = df()$p[1], s = df()$s[1])
+                        #s1 <<- c(x = data$x[1], p = data$p[1], s = data$s[1])
+                        
+                        
                         # Get optimized parameters
-                        getParms()
+                        getParms(df())
 
                         
                 })
@@ -481,10 +504,56 @@ server = function(input, output, session) {
                 })
                 
                 
+                #############################################################################################
+                #### t-test section #########################################################################
+                
+                df3 <- reactive({
+                        req(input$file3)
+                        read.xlsx(input$file3$datapath, header = TRUE, sheetIndex = as.numeric(input$sheet3))
+                })
+                
+                # Show table with data
+                output$content3 <- renderTable({
+                        req(input$file3)
+                        
+                        if(input$check3) {
+                                return(head(df3()))
+                        }
+                        else {
+                                return(df3())
+                        }
+                        
+                })
+                
+                # Show boxplot
+                output$plot3 <- renderPlot({
+                        
+                        # Get column names
+                        nameDat <- colnames(df3())
+                        
+                        ggplot(data = df3()) + 
+                                
+                                geom_boxplot(mapping = aes(x =  .data[[nameDat[[1]]]],
+                                                           y = .data[[nameDat[[2]]]], 
+                                                           color = .data[[nameDat[[1]]]])) +
+                                
+                                labs(title = "boxplot")
+                })
+                
+                # Make t-test
+                myt_test <- eventReactive(input$act3 ,{
+                        data3 <<- df3()
+                        myttest()
+                })
+                
+                # Show resutls
+                output$t_test <- renderPrint({
+                        
+                        myt_test()
+                })
                 
 }
 
 
 
-shinyApp(ui, server)
-                                 
+shinyApp(ui, server)  
