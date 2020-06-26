@@ -34,16 +34,17 @@ simMod <- function(s,p) {
 # Function to show changes of sustrate, product and biomass on time
 showPlot <- function(data) {
         ggplot(data = data) + 
-                geom_point(mapping = aes(x = time, y = s, color = "s")) + 
-                geom_point(mapping = aes(x = time, y = x, color = "x")) +
-                geom_point(mapping = aes(x = time, y = p,color = "p")) + 
+                geom_point(mapping = aes(x = time, y = s, color = "s"), size = 3) + 
+                geom_point(mapping = aes(x = time, y = x, color = "x"), size = 3) +
+                geom_point(mapping = aes(x = time, y = p,color = "p"), size = 3) + 
                 labs(title = "data", x = "time (h)", y = "Density (g/L)")+
                 theme_bw()
 }
 
 # Function the get optimized parameters
-getParms <- function() {
+getParms <- function(mydata) {
         
+        data <<- mydata
         # Using GA to get parameters
         parmsOpt <- ga(type = 'real-valued',
                        fitness = function(parms) - costFun(parms),
@@ -53,7 +54,7 @@ getParms <- function() {
                        pcrossover = 0.8,
                        pmutation = 0.1,
                        names = names(p),
-                       maxiter = 100,
+                       maxiter = 200,
                        maxFitness = -2000)
         
         newparms <- parmsOpt@solution %>% as.data.frame() %>% unlist()
@@ -67,7 +68,7 @@ getParms <- function() {
 costFun <- function(parms) {
         
         names(parms) <- names(p)
-        simOut <- ode(y = s,
+        simOut <- ode(y =  c(x = data$x[1], p = data$p[1], s = data$s[1]),
                       times = seq(0,60,4),
                       func = model,
                       parms = parms,
@@ -78,7 +79,7 @@ costFun <- function(parms) {
 # Function to compare simulation with optimized parameters and data
 getComp <- function(optparms) {
         
-        fitness <- ode(y = sdat,
+        fitness <- ode(y = c(x = data$x[1], p = data$p[1], s = data$s[1]),
                        times = seq(0,60,4),
                        func = model,
                        parms = optparms,
@@ -95,4 +96,23 @@ getComp <- function(optparms) {
                 geom_point(data = data, mapping = aes(x = time, y = p,color = "p")) +
                 labs(title = "simulation", x = "time (h)", y = "Density (g/L)")+
                 theme_bw()
+}
+
+# This funtion makes t-test
+myttest <- function() {
+        
+        # Get leves 
+        levDat <- levels(data3[,1])
+        # Get column names
+        nameDat <- colnames(data3)
+        
+        # Let's split the data
+        datA <- filter(data3, .data[[nameDat[[1]]]] == levDat[1]) %>% 
+                select(nameDat[2]) %>% unlist()
+        
+        datB <- filter(data3, .data[[nameDat[[1]]]] == levDat[2]) %>% 
+                select(nameDat[2]) %>% unlist()
+        
+        # The t-test
+        t.test(datA,datB)
 }
