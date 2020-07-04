@@ -1,4 +1,4 @@
-# Growth without inhinition and with cell death
+# Growth without inhinition and with cell death (model4)
 # Juan Manuel
 # 21/06/20
 # Note: This model donesn't consider any type of inhibition and also 
@@ -13,16 +13,15 @@ model <-function(time, parms, state) {
         with(as.list(c(parms,state)),{
                 
                 #  reaction kinetic rates
-                v <- vmax*s/(ks+s)
+                v <- Vmax*s/(Ks+s)
                 
                 # differential equations
-                dx <- v*x - kd*x
-                dp <- ypx*v*x
-                ds <- -(1/yxs)*v*x
+                dx <- v*x - Kd*x
+                dp <- Ypx*v*x
+                ds <- -(1/Yxs)*v*x
                 return(list(c(dx,dp,ds)))
         })
 }
 
 # Set parameters
-p <- c(vmax = 0.5, ks = 80, yxs = 0.8, ypx = 12, kd = 0.01)
-
+p <- c(Vmax = 0.5, Ks = 80, Yxs = 0.8, Ypx = 12, Kd = 0.01)
