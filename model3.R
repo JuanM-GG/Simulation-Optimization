@@ -10,15 +10,15 @@ model <-function(time, parms, state) {
         with(as.list(c(parms,state)),{
                 
                 # reaction kinetic rates
-                v <- vmax*s/(ks+s)
+                v <- Vmax*s/(Ks+s)
                 
                 # differential equations
                 dx <- v*x
-                dp <- alfa*v*x + beta*x 
-                ds <- -(1/yxs)*v*x
+                dp <- alpha*v*x + beta*x 
+                ds <- -(1/Yxs)*v*x
                 return(list(c(dx,dp,ds)))
         })
 }
 
 # Set parameters
-p <- c(vmax = 0.5, ks = 80, yxs = 0.8, alfa = 12, beta = 0.1)
+p <- c(Vmax = 0.5, Ks = 80, Yxs = 0.8, alpha = 12, beta = 0.1)
