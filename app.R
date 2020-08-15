@@ -1,4 +1,9 @@
-# Load libraries #
+# Install required packages #########################################
+list_of_packages <- c("shiny","shinydashboard","markdown","xlsx","shinybusy","shinythemes","deSolve","GA","FME","tidyverse","shinyWidgets")
+new_packages <- list_of_packages[!(list_of_packages %in%  installed.packages()[,"Package"])]
+if (length(new_packages)) install.packages(new_packages)
+
+# Load libraries ############################################
 library(shiny)
 library(shinydashboard)
 library(markdown)
@@ -9,1093 +14,2046 @@ library(deSolve)
 library(GA)
 library(FME)
 library(tidyverse)
-
-# Load function.R script
+library( shinyWidgets)
+# Load function.R script ######################################
 source("functions.R")
 
+# ui #################################################
 ui = navbarPage("Fermentation Analysis", theme = shinytheme("spacelab"),
                 
-############## Simulation section ##########################################################################                        
-                        tabPanel("Simulation",
-                                 
-                                 withMathJax(), # For the LaTex code
-                                 
-                                 add_busy_spinner(spin = "fading-circle"),
-                                 
-                                 sidebarLayout(
-                                         
-                                         sidebarPanel(
-                                                 
-                                                 selectInput(inputId = "mod_int_sim",label = "Choose a model",
-                                                             choices = list("Model 1 (Monod without inhibition by product)"="model_1",
-                                                                            "Model 2 (Monod with inhibition by product)" = "model_2",
-                                                                            "Model 3 (Monod with product partially linked to growth)"="model_3",
-                                                                            "Model 4 (Monod with cell death)"="model_4",
-                                                                            "Model 5 (Monod with sustrate consumption for maintenance)"="model_5",
-                                                                            "Model 6 (Monod with inhibition by product and product partially linked to growth)"="model_6"),
-                                                             selected = "model_1"),
-                                                 
-                                                 
-                                                 h5("Enter Initial Conditions"),
-                                                 
-                                                 numericInput("x_int_sim",helpText('$$X_{0}$$'),0.2),
-                                                 numericInput("s_int_sim",helpText('$$S_{0}$$'),40),
-                                                 numericInput("p_int_sim",helpText('$$P_{0}$$'),0),
-                                                 
-                                                 hr(),
-                                                 
-                                                 
-                                                 conditionalPanel(condition = "output.model1_rec_sim",
-                                                                  
-                                                                   h5("Model Parameters"),
-                                                                  
-                                                                   fluidRow(
-                                                                           
-                                                                           column(width = 6,
-                                                                                  sliderInput(inputId = "vmax_mod1_int_sim",label = helpText('$$v_{max}$$'),min = 0.01,max = 2,value = 0.5,step = 0.1),
-                                                                                  sliderInput(inputId = "ks_mod1_int_sim",label = helpText('$$K_{s}$$'),min = 1,max = 200,value = 80,step = 1)
-                                                                           ),
-                                                                           column(width = 6,
-                                                                                  sliderInput(inputId = "yxs_mod1_int_sim",label = helpText('$$Y_{xs}$$'),min = 0.01,max = 1.5,value = 0.8,step = 0.1),
-                                                                                  sliderInput(inputId = "ypx_mod1_int_sim",label = helpText('$$Y_{px}$$'),min = 1,max = 20,value = 12,step = 1))
-                                                                   )),
-                                                 
-                                                 conditionalPanel(condition = "output.model2_rec_sim",
-                                                                  
-                                                                  h5("Model Parameters"),
-                                                                  
-                                                                   fluidRow(
-                                                                           
-                                                                           column(width = 6,
-                                                                                  sliderInput(inputId = "vmax_mod2_int_sim",label = helpText('$$v_{max}$$'),min = 0.01,max = 2,value = 0.5,step = 0.1),
-                                                                                  sliderInput(inputId = "ks_mod2_int_sim",label = helpText('$$K_{s}$$'),min = 1,max = 200,value = 80,step = 1),
-                                                                                  sliderInput(inputId = "yxs_mod2_int_sim",label = helpText('$$Y_{xs}$$'),min = 0.01,max = 1.5,value = 0.8,step = 0.1)
-                                                                           ),
-                                                                           column(width = 6,
-                                                                                  sliderInput(inputId = "ypx_mod2_int_sim",label = helpText('$$Y_{px}$$'),min = 1,max = 20,value = 12,step = 1),
-                                                                                  sliderInput(inputId = "kp_mod2_int_sim",label = helpText('$$K_{p}$$'),min = 1,max = 200,value = 180,step = 1))
-                                                                   )
-                                                 ),
-                                                 
-                                                 conditionalPanel(condition = "output.model3_rec_sim",
-                                                                  
-                                                                   h5("Model Parameters"),
-                                                                  
-                                                                   fluidRow(
-                                                                           
-                                                                           column(width = 6,
-                                                                                  sliderInput(inputId = "vmax_mod3_int_sim",label = helpText('$$v_{max}$$'),min = 0.01,max = 2,value = 0.5,step = 0.1),
-                                                                                  sliderInput(inputId = "ks_mod3_int_sim",label = helpText('$$K_{s}$$'),min = 1,max = 200,value = 80,step = 1),
-                                                                                  sliderInput(inputId = "yxs_mod3_int_sim",label = helpText('$$Y_{xs}$$'),min = 0.01,max = 1.5,value = 0.8,step = 0.1)
-                                                                           ),
-                                                                           column(width = 6,
-                                                                                  sliderInput(inputId = "alpha_mod3_int_sim",label = helpText('\\(\\alpha\\)'),min = 1,max = 20,value = 12,step = 1),
-                                                                                  sliderInput(inputId = "beta_mod3_int_sim",label = helpText('\\(\\beta\\)'),min = 0.01,max = 0.5,value = 0.1,step = 0.01))
-                                                                   )
-                                                 ),
-                                                 
-                                                 conditionalPanel(condition = "output.model4_rec_sim",
-                                                                  
-                                                                   h5("Model Parameters"),
-                                                                  
-                                                                   fluidRow(
-                                                                           
-                                                                           column(width = 6,
-                                                                                  sliderInput(inputId = "vmax_mod4_int_sim",label = helpText('$$v_{max}$$'),min = 0.01,max = 2,value = 0.5,step = 0.1),
-                                                                                  sliderInput(inputId = "ks_mod4_int_sim",label = helpText('$$K_{s}$$'),min = 1,max = 200,value = 80,step = 1),
-                                                                                  sliderInput(inputId = "yxs_mod4_int_sim",label = helpText('$$Y_{xs}$$'),min = 0.01,max = 1.5,value = 0.8,step = 0.1)
-                                                                           ),
-                                                                           column(width = 6,
-                                                                                  sliderInput(inputId = "ypx_mod4_int_sim",label = helpText('$$Y_{px}$$'),min = 1,max = 20,value = 12,step = 1),
-                                                                                  sliderInput(inputId = "kd_mod4_int_sim",label = helpText('$$k_{d}$$'),min = 0.001,max = 1,value = 0.01,step = 0.001))
-                                                                   )
-                                                ),
-                                                 
-                                                conditionalPanel(condition = "output.model5_rec_sim",
-                                                                 
-                                                                  h5("Model Parameters"),
-                                                                 
-                                                                  fluidRow(
-                                                                          
-                                                                          column(width = 6,
-                                                                                 sliderInput(inputId = "vmax_mod5_int_sim",label = helpText('$$v_{max}$$'),min = 0.01,max = 2,value = 0.5,step = 0.1),
-                                                                                 sliderInput(inputId = "ks_mod5_int_sim",label = helpText('$$K_{s}$$'),min = 1,max = 200,value = 80,step = 1),
-                                                                                 sliderInput(inputId = "yxs_mod5_int_sim",label = helpText('$$Y_{xs}$$'),min = 0.01,max = 1.5,value = 0.8,step = 0.1)
-                                                                          ),
-                                                                          column(width = 6,
-                                                                                 sliderInput(inputId = "ypx_mod5_int_sim",label = helpText('$$Y_{px}$$'),min = 1,max = 20,value = 12,step = 1),
-                                                                                 sliderInput(inputId = "km_mod5_int_sim",label = helpText('$$k_{m}$$'),min = 0.01,max = 0.1,value = 0.05,step = 0.01))
-                                                                  )
-                                                ),
-                                                
-                                                conditionalPanel(condition = "output.model6_rec_sim",
-                                                                 
-                                                                 h5("Model Parameters"),
-                                                                 
-                                                                 fluidRow(
-                                                                         
-                                                                         column(width = 6,
-                                                                                sliderInput(inputId = "vmax_mod6_int_sim",label = helpText('$$v_{max}$$'),min = 0.01,max = 2,value = 0.5,step = 0.1),
-                                                                                sliderInput(inputId = "ks_mod6_int_sim",label = helpText('$$K_{s}$$'),min = 1,max = 200,value = 80,step = 1),
-                                                                                sliderInput(inputId = "yxs_mod6_int_sim",label = helpText('$$Y_{xs}$$'),min = 0.01,max = 1.5,value = 0.8,step = 0.1)
-                                                                         ),
-                                                                         column(width = 6,
-                                                                                sliderInput(inputId = "kp_mod6_int_sim",label = helpText('$$K_{p}$$'),min = 1,max = 200,value = 180,step = 1),
-                                                                                sliderInput(inputId = "alpha_mod6_int_sim",label = helpText('\\(\\alpha\\)'),min = 1,max = 20,value = 12,step = 1),
-                                                                                sliderInput(inputId = "beta_mod6_int_sim",label = helpText('\\(\\beta\\)'),min = 0.01,max = 0.5,value = 0.1,step = 0.01))
-                                                                 )
-                                                )
-                                                 
-                                                 
-                                                 
-                                         ),
-                                         
-                                         mainPanel(
-                                                 h3("Scatter Plot Simulation"),
-                                                 plotOutput("plot_result_out_sim"),
-                                                 downloadButton("down_plot_result_out_sim", "Download Plot"),
-                                                 hr(),
-                                                 fluidRow(
-                                                         column(4,offset = 1,
-                                                                uiOutput('ui_out_sim')
+                # Simulation section ########################################################################## 
+                navbarMenu("Simulation",
+                           
+                           # Batch process section ###########################################                   
+                           tabPanel("Batch process",
+                                    
+                                    # For the LaTex code
+                                    withMathJax(), 
+                                    
+                                    # For the wait
+                                    add_busy_spinner(spin = "fading-circle"),
+                                    
+                                    sidebarLayout(
+                                            
+                                            # Sidebar Panel simulation ####
+                                            sidebarPanel(
+                                                    
+                                                    # Select model ####
+                                                    selectInput(inputId = "mod_int_sim",label = "Select a model",
+                                                                choices = list("Model 1 (Monod without inhibition by product)" = "model_1",
+                                                                               "Model 2 (Monod with inhibition by product)" = "model_2",
+                                                                               "Model 3 (Monod with product partially linked to growth)" = "model_3",
+                                                                               "Model 4 (Monod with cell death)" = "model_4",
+                                                                               "Model 5 (Monod with sustrate consumption for maintenance)" = "model_5",
+                                                                               "Model 6 (Monod with inhibition by product and product partially linked to growth)" = "model_6"),
+                                                                selected = "model_1"),
+                                                    
+                                                    # Initial conditions ####
+                                                    
+                                                    fluidRow(style = "text-align:center",
+                                                             h5("Initial Conditions"),
+                                                             
+                                                             column(4,
+                                                                    numericInput("x_int_sim", helpText('$$x_{0} \\ (g/L)$$'), 0.2)
+                                                             ),
+                                                             
+                                                             column(4,
+                                                                    numericInput("s_int_sim", helpText('$$s_{0} \\ (g/L)$$'), 40)
+                                                             ),
+                                                             
+                                                             column(4,
+                                                                    numericInput("p_int_sim", helpText('$$p_{0} \\ (g/L)$$'), 0)
+                                                             )
+                                                             
+                                                    ),
+                                                    
+                                                    hr(),
+                                                    
+                                                    # Conditional panel model 1 ####
+                                                    conditionalPanel(condition = "output.parms_mod1_ui_sim",
+                                                                     
+                                                                     
+                                                                     fluidRow(style = "text-align:center",
+                                                                              h5("Kitnetic parameters"),
+                                                                              
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "vmax_mod1_int_sim", label = helpText('$$v_{max}$$'), 
+                                                                                                 min = 0.5, max = 3, value = 1.2, step = 0.1, post = " 1/h"),
+                                                                                     sliderInput(inputId = "ks_mod1_int_sim",label = helpText('$$K_{s}$$'), 
+                                                                                                 min = 100, max = 400, value = 280, step = 1, post = " g/L")
+                                                                              ),
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "yxs_mod1_int_sim",label = helpText('$$Y_{xs}$$'), 
+                                                                                                 min = 0.01, max = 1, value = 0.2, step = 0.01),
+                                                                                     sliderInput(inputId = "ypx_mod1_int_sim",label = helpText('$$Y_{px}$$'), min = 1, max = 20, value = 4, step = 0.1)
+                                                                              )
+                                                                     )
+                                                    ),
+                                                    
+                                                    # Conditional panel model 2 #######################################################
+                                                    conditionalPanel(condition = "output.parms_mod2_ui_sim",
+                                                                     
+                                                                     fluidRow(style = "text-align:center",
+                                                                              h5("Kitnetic parameters"),
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "vmax_mod2_int_sim", label = helpText('$$v_{max}$$'),
+                                                                                                 min = 0.5, max = 3, value = 1.2, step = 0.1, post = " 1/h"),
+                                                                                     sliderInput(inputId = "ks_mod2_int_sim", label = helpText('$$K_{s}$$'),
+                                                                                                 min = 100, max = 400, value = 280, step = 1, post = " g/L"),
+                                                                                     sliderInput(inputId = "yxs_mod2_int_sim", label = helpText('$$Y_{xs}$$'),
+                                                                                                 min = 0.01, max = 1, value = 0.2, step = 0.01)
+                                                                              ),
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "ypx_mod2_int_sim", label = helpText('$$Y_{px}$$'), 
+                                                                                                 min = 1, max = 20, value = 4, step = 0.1),
+                                                                                     sliderInput(inputId = "kp_mod2_int_sim", label = helpText('$$K_{p}$$'), 
+                                                                                                 min = 50, max = 200, value = 120, step = 1, post = " g/L")
+                                                                              )
+                                                                     )
+                                                    ),
+                                                    # Conditional panel model 3 #######################################################
+                                                    conditionalPanel(condition = "output.parms_mod3_ui_sim",
+                                                                     
+                                                                     fluidRow(style = "text-align:center",
+                                                                              h5("Kitnetic parameters"),
+                                                                              
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "vmax_mod3_int_sim", label = helpText('$$v_{max}$$'), 
+                                                                                                 min = 0.5, max = 3, value = 1.2, step = 0.1, post = " 1/h"),
+                                                                                     sliderInput(inputId = "ks_mod3_int_sim", label = helpText('$$K_{s}$$'), 
+                                                                                                 min = 100, max = 400, value = 280, step = 1, post = " g/L"),
+                                                                                     sliderInput(inputId = "yxs_mod3_int_sim", label = helpText('$$Y_{xs}$$'),
+                                                                                                 min = 0.01, max = 1, value = 0.2, step = 0.01)
+                                                                              ),
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "alpha_mod3_int_sim", label = helpText('\\(\\alpha\\)'), 
+                                                                                                 min = 1, max = 20, value = 4, step = 0.1),
+                                                                                     sliderInput(inputId = "beta_mod3_int_sim", label = helpText('\\(\\beta\\)'), 
+                                                                                                 min = 0, max = 0.1, value = 0.01, step = 0.01, post = " 1/h")
+                                                                              )
+                                                                     )
+                                                    ),
+                                                    # Conditional panel model 4 #######################################################
+                                                    conditionalPanel(condition = "output.parms_mod4_ui_sim",
+                                                                     
+                                                                     fluidRow(style = "text-align:center",
+                                                                              h5("Kitnetic parameters"),
+                                                                              
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "vmax_mod4_int_sim", label = helpText('$$v_{max}$$'), 
+                                                                                                 min = 0.5, max = 3, value = 1.2, step = 0.1, post = " 1/h"),
+                                                                                     sliderInput(inputId = "ks_mod4_int_sim", label = helpText('$$K_{s}$$'), 
+                                                                                                 min = 100, max = 400, value = 280, step = 1, post = " g/L"),
+                                                                                     sliderInput(inputId = "yxs_mod4_int_sim", label = helpText('$$Y_{xs}$$'), 
+                                                                                                 min = 0.01, max = 1, value = 0.2, step = 0.01)
+                                                                              ),
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "ypx_mod4_int_sim", label = helpText('$$Y_{px}$$'), 
+                                                                                                 min = 1, max = 20, value = 4, step = 1),
+                                                                                     sliderInput(inputId = "kd_mod4_int_sim", label = helpText('$$k_{d}$$'), 
+                                                                                                 min = 0, max = 0.1, value = 0.01, step = 0.01, post = " g/L")
+                                                                              )
+                                                                     )
+                                                    ),
+                                                    
+                                                    # Conditional panel model 5 #######################################################
+                                                    conditionalPanel(condition = "output.parms_mod5_ui_sim",
+                                                                     
+                                                                     fluidRow(style = "text-align:center",
+                                                                              h5("Kitnetic parameters"),
+                                                                              
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "vmax_mod5_int_sim", label = helpText('$$v_{max}$$'),
+                                                                                                 min = 0.5, max = 3, value = 1.2, step = 0.1, post = "1/h"),
+                                                                                     sliderInput(inputId = "ks_mod5_int_sim", label = helpText('$$K_{s}$$'),
+                                                                                                 min = 100, max = 400, value = 280, step = 1, post = "g/L"),
+                                                                                     sliderInput(inputId = "yxs_mod5_int_sim", label = helpText('$$Y_{xs}$$'),
+                                                                                                 min = 0.01, max = 1, value = 0.2, step = 0.01)
+                                                                              ),
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "ypx_mod5_int_sim", label = helpText('$$Y_{px}$$'), 
+                                                                                                 min = 1, max = 20, value = 4, step = 1),
+                                                                                     sliderInput(inputId = "km_mod5_int_sim", label = helpText('$$k_{m}$$'),
+                                                                                                 min = 0, max = 0.1, value = 0.01, step = 0.01, post = "1/h")
+                                                                              )
+                                                                     )
+                                                    ),
+                                                    
+                                                    # Conditional panel model 6 #######################################################
+                                                    conditionalPanel(condition = "output.parms_mod6_ui_sim",
+                                                                     
+                                                                     fluidRow(style = "text-align:center",
+                                                                              h5("Kitnetic parameters"),
+                                                                              
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "vmax_mod6_int_sim", label = helpText('$$v_{max}$$'), 
+                                                                                                 min = 0.5, max = 3, value = 1.2, step = 0.1, post = "1/h"),
+                                                                                     sliderInput(inputId = "ks_mod6_int_sim", label = helpText('$$K_{s}$$'), 
+                                                                                                 min = 100, max = 400, value = 280, step = 1, post = "g/L"),
+                                                                                     sliderInput(inputId = "yxs_mod6_int_sim", label = helpText('$$Y_{xs}$$'), 
+                                                                                                 min = 0.01, max = 1, value = 0.2, step = 0.01)
+                                                                              ),
+                                                                              column(width = 6,
+                                                                                     sliderInput(inputId = "kp_mod6_int_sim", label = helpText('$$K_{p}$$'), 
+                                                                                                 min = 50, max = 200, value = 120, step = 1, post = "g/L"),
+                                                                                     sliderInput(inputId = "alpha_mod6_int_sim", label = helpText('\\(\\alpha\\)'),
+                                                                                                 min = 1, max = 20, value = 4, step = 0.1),
+                                                                                     sliderInput(inputId = "beta_mod6_int_sim", label = helpText('\\(\\beta\\)'),
+                                                                                                 min = 0, max = 0.1, value = 0.01, step = 0.01, post = "1/h")
+                                                                              )
+                                                                     )
+                                                    ),
+                                                    hr(),
+                                                    # More widgets ####
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             column(5,
+                                                                    selectInput(inputId = "step_int_sim",label = "Step (h)",
+                                                                                choices = list("0.1","0.5","1","4","6"), selected = "1")
+                                                             ),
+                                                             
+                                                             column(5, offset = 1,
+                                                                    selectInput(inputId = "interval_int_sim",label = "Simulation time (h)",
+                                                                                choices = list("12","24","48","60","100"), selected = "60")      
+                                                             )
+                                                    ),
+                                                    hr(),
+                                                    fluidRow(
+                                                            column(4, offset = 1,
+                                                                   downloadButton("down_plot_out_sim", "Simulation Plot")
+                                                            ),
+                                                            column(4, offset = 1,
+                                                                   downloadButton("down_data_out_sim", "Simulation Data")
+                                                            )
+                                                    )
+                                                    
+                                            ),              
+                                            
+                                            # Main panel simulation ####
+                                            mainPanel(
+                                                    div(style = "margin-bottom: -5em; text-align:center", 
+                                                        fluidRow(
+                                                                
+                                                                column(4,offset = 1,
+                                                                       
+                                                                       h3("Model"),
+                                                                       hr(),
+                                                                       uiOutput('ui_out_sim')
                                                                 ),
-                                                         column(4,offset = 1,
-                                                                h5("Process Network",style = "color:gray"),
-                                                                imageOutput("network_out_sim"))
-                                                 )
-                                                 
-                                         )
-                                         
-                                 )
-                                 
-                        ),
-
-#############################################################################################################
-############## Optimization section ##########################################################################                        
-                        tabPanel("Optimization",
-                                 
-                                 add_busy_spinner(spin = "fading-circle"),
-                                 
-                                 sidebarLayout(
-                                         
-                                         sidebarPanel(
-                                                 
-                                                 fileInput(inputId = "data_int_opt",label = "Enter the data", multiple = FALSE,
-                                                           accept = c(".xlsx")),
-                                                
-                                                 checkboxInput(inputId = "header_int_opt",label = "Head", value = TRUE),
-                                                 
-                                                 selectInput(inputId = "sheet_int_opt",label = "Select sheet",
-                                                             choices = list("1","2","3","4","5"),selected = "1"),
-                                                 
-                                                 selectInput(inputId = "mod_int_opt",label = "Choose a model",
-                                                             choices = list("Model 1"="model_1","Model 2"="model_2",
-                                                                            "Model 3"="model_3","Model 4"="model_4",
-                                                                            "Model 5"="model_5"),
-                                                             selected = "model_1"),
-                                                 
-                                                 actionButton("make_opt_int_opt","Make optimization")
-                                                 
-                                         ),
-                                         
-                                         mainPanel(
-                                                 
-                                                 fluidRow(
-                                                         column(3,
-                                                                h3("Data"),
-                                                                tableOutput("table_data_out_opt")
-                                                         ),
-                                                         column(8,offset = 1,
-                                                                h3("Scatter Plot Data"),
-                                                                plotOutput("plot_data_out_opt"),
-                                                                downloadButton("down_plot_data_out_opt", "Download Plot"))
-                                                 ),
-                                                 fluidRow(
-                                                         column(3,
-                                                                h3("Optimized Parameters"),
-                                                                tableOutput("table_result_out_opt"),
-                                                                downloadButton("down_table_result_out_opt", "Download Results")
-                                                         ),
-                                                         column(8, offset = 1,
-                                                                h3("Scatter Plot Results"),
-                                                                plotOutput("plot_result_out_opt"),
-                                                                downloadButton("down_plot_result_out_opt", "Download Plot"))  
-                                                 )
-                                                 
-                                         )
-                                 )
-                                 
-                        ),
-                        #######################################################################################################################
-                        ##### Statistic analysis section #####################################################################################
-                        navbarMenu("Statistic Analysis",
-                                   
-                                   
-                                   ##### t-student section ######
-                                   tabPanel("t-student",
-                                            
-                                            add_busy_spinner(spin = "fading-circle"),
-                                            
-                                            h3("t-student analysis"),
-                                            
-                                            sidebarLayout(
+                                                                
+                                                                column(4,offset = 1,
+                                                                       
+                                                                       h3("Process Network"),
+                                                                       hr(),
+                                                                       imageOutput("network_out_sim",height = 300)
+                                                                )
+                                                        )),
                                                     
-                                                    sidebarPanel(
-                                                            
-                                                            fileInput(inputId = "data_int_tst",label = "Enter the data",multiple = TRUE),
-                                                            
-                                                            checkboxInput(inputId = "header_int_tst",label = "Head", value = TRUE),
-                                                            
-                                                            selectInput(inputId = "sheet_int_tst",label = "Select sheet",
-                                                                        choices = list("1","2","3","4"),selected = "1"),
-                                                            
-                                                            actionButton("make_tst_int_tst", "Make t-test")
-                                                            
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             column(12,
+                                                                    
+                                                                    h3("Batch Process Simulation"),
+                                                                    hr(),
+                                                                    plotOutput("plot_sim_out_sim")
+                                                             )
+                                                             
                                                     ),
                                                     
-                                                    mainPanel(
+                                                    fluidRow(
                                                             
-                                                            fluidRow(
-                                                                    
-                                                                    column(3,
-                                                                           h3("Data"),
-                                                                           tableOutput("table_data_out_tst")
-                                                                    ),
-                                                                    column(8, offset = 1,
-                                                                           h3("Boxplot"),
-                                                                           plotOutput("plot_data_out_tst"),
-                                                                           downloadButton("down_plot_data_out_tst")
-                                                                           )
-                                                            ),
-                                                            br(),
-                                                            fluidRow(
-                                                                    column(4,
-                                                                           h3("Results"),
-                                                                           tableOutput("table_result_out_tst"),
-                                                                           downloadButton("down_table_result_out_tst"))
+                                                            column(8,
+                                                                   h3("Final concentration values"),
+                                                                   hr(),
+                                                                   tableOutput("end_conc_out_sim")       
                                                             )
-                                                
                                                     )
-                                            )
+                                            ) 
+                                            #####
+                                    )
+                                    
+                           ),
+                           # Fed-batch process section ###########################################
+                           tabPanel("Fed-batch process",
+                                    
+                                    ####
+                                    
+                                    # For the LaTex code
+                                    withMathJax(), 
+                                    
+                                    # For the wait
+                                    add_busy_spinner(spin = "fading-circle"),
+                                    
+                                    sidebarLayout(
                                             
-                                   ),
-                                   
-                                   ##########################################################################################
-                                   ###### ANOVA section #####################################################################
-                                   tabPanel("ANOVA",
-                                            
-                                            add_busy_spinner(spin = "fading-circle"),
-                                            
-                                            h3("ANOVA analysis"),
-                                            
-                                            sidebarLayout(
+                                            # sidebar panel ####
+                                            sidebarPanel(
                                                     
-                                                    sidebarPanel(
-                                                            
-                                                            fileInput(inputId = "data_int_anova",label = "Enter the data",multiple = TRUE),
-                                                            
-                                                            checkboxInput(inputId = "header_int_anova",label = "Head",value = TRUE),
-                                                            
-                                                            selectInput(inputId = "sheet_int_anova", label = "Select sheet",
-                                                                        choices = list("1","2","3","4","5"),selected = "1"),
-                                                            
-                                                            actionButton("make_anova_int_anova", "Make ANOVA"),
-                                                            
-                                                            br(),
-                                                            br(),
-                                                            
-                                                            actionButton("make_tukey_int_tukey", "Make Tukey test")
-                                                            
-                                                            
+                                                    # Initial conditions #####
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             p("Initial conditions"),
+                                                             
+                                                             column(4,
+                                                                    numericInput("x_int_fb_sim", helpText('$$x_{0} \\ (g/L)$$'), 0.2)
+                                                             ),
+                                                             
+                                                             column(4,
+                                                                    numericInput("s_int_fb_sim", helpText('$$s_{0} \\ (g/L)$$'), 40)
+                                                             ),
+                                                             
+                                                             column(4,
+                                                                    numericInput("p_int_fb_sim", helpText('$$p_{0} \\ (g/L)$$'), 0)
+                                                             )
+                                                    ),       
+                                                    
+                                                    hr(),
+                                                    
+                                                    # Kinetic parameters ####
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             p("Kinetic parameters"),
+                                                             
+                                                             column(4, offset = 1, 
+                                                                    
+                                                                    
+                                                                    numericInput(inputId = "vmax_int_fb_sim",label =  helpText('$$v_{max} \\ (g/L)$$'),value = 1.2),
+                                                                    numericInput(inputId = "ks_int_fb_sim",label = helpText('$$K_{s} \\ (g/L)$$'),value = 280),
+                                                                    numericInput(inputId = "ki_int_fb_sim",label = helpText('$$K_{i} \\ (g/L)$$'),value = 10)
+                                                             ),
+                                                             
+                                                             column(4, offset = 1,
+                                                                    
+                                                                    
+                                                                    numericInput(inputId = "yxs_int_fb_sim",label = helpText('$$Y_{xs}$$'),value = 0.2),
+                                                                    numericInput(inputId = "ypx_int_fb_sim",label = helpText('$$Y_{px}$$'),value = 4)
+                                                             )
+                                                    ),       
+                                                    
+                                                    hr(),
+                                                    
+                                                    # Fed-batch parameters ####
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             p("Operation parameters"),
+                                                             
+                                                             column(4, offset = 1,
+                                                                    
+                                                                    
+                                                                    sliderInput(inputId = "Q_int_fb_sim",label = helpText('$$Q$$'),
+                                                                                min = 0, max = 5, value = 0, step = 0.1, post = "L/h"),
+                                                                    
+                                                                    sliderInput(inputId = "sin_int_fb_sim", label = helpText('$$S_{F}$$'),
+                                                                                min = 0, max = 50, value = 40, step = 5, post = "g/L"),
+                                                                    
+                                                                    numericInput(inputId = "tf_int_fb_sim",label = "Stop (h)", value = 100)
+                                                                    
+                                                                    
+                                                             ),
+                                                             
+                                                             column(4, offset = 1,
+                                                                    
+                                                                    
+                                                                    numericInput(inputId = "V0_int_fb_sim",label = helpText('$$V_{0} (L)$$'),value = 10),
+                                                                    
+                                                                    br(),
+                                                                    
+                                                                    sliderInput(inputId = "Vlim_int_fb_sim",label = helpText('$$V_{Lim}$$'),
+                                                                                min = 5, max = 300 ,value = 300, step = 5, post = "L")
+                                                             )
+                                                             
                                                     ),
                                                     
-                                                    mainPanel(
+                                                    hr(),
+                                                    # More widgets ####
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             column(5,
+                                                                    selectInput(inputId = "step_int_fb_sim",label = "Step (h)",
+                                                                                choices = list("0.1","0.5","1","4","6"), selected = "1")
+                                                             ),
+                                                             
+                                                             column(5, offset = 1,
+                                                                    selectInput(inputId = "end_time_int_fb_sim",label = "Simulation time (h)",
+                                                                                choices = list("12","24","48","60","100"), selected = "100")      
+                                                             )
+                                                    ),
+                                                    hr(),
+                                                    fluidRow(
+                                                            
+                                                            column(4, offset = 1,
+                                                                   downloadButton("down_data_out_fb_sim", "Simulation Data")
+                                                            )
+                                                    ),
+                                                    # More space ####
+                                                    br(),
+                                                    br(),
+                                                    br(),
+                                                    br()
                                                     
-                                                            fluidRow(
-                                                                    column(3,
-                                                                           h3("Data"),
-                                                                           tableOutput("table_data_out_anova"),
-                                                                           br(),
-                                                                           hr(),
-                                                                           h3("Means"),
-                                                                           tableOutput("table_means_out_anova")
-                                                                    ),
-                                                                    column(8, offset = 1,
-                                                                           h3("Boxplot"),
-                                                                           plotOutput("plot_data_out_anova"),
-                                                                           downloadButton("down_plot_data_out_anova", "Download Plot")
-                                                                    )
+                                            ),
+                                            
+                                            # Main panel ####
+                                            mainPanel(
+                                                    div(style = "margin-bottom: 0em; text-align:center",
+                                                        fluidRow(
+                                                                
+                                                                # Model ####
+                                                                column(7,
+                                                                       
+                                                                       h3("Model"),
+                                                                       hr(),
+                                                                       withMathJax(
+                                                                               helpText('Model 7 (Monod with inhibition by substrate): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s+\\dfrac{s^{2}}{k_{i}}}*x - \\frac{Q}{V}*x$$'),
+                                                                               helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)* v_{max}*\\frac{s}{k_{s}+s+\\dfrac{s^{2}}{k_{i}}}*x + \\frac{Q}{V}*\\left(s_{F} - s\\right)$$'),
+                                                                               helpText('$$\\frac{dp}{dt} = y_{px}* v_{max}*\\frac{s}{k_{s}+s+\\dfrac{s^{2}}{k_{i}}}*x - \\frac{Q}{V}*p$$')
+                                                                       )
+                                                                ),
+                                                                
+                                                                # Process network
+                                                                column(4,
+                                                                       
+                                                                       h3("Process Network"),
+                                                                       hr(),
+                                                                       imageOutput("network_out_fb_sim",height = 300)
+                                                                )
+                                                        )),
+                                                    
+                                                    # Simulation plots #####
+                                                    
+                                                    fluidRow(style = "margin-bottom: 0em; text-align:center",
+                                                             h3("Fed Batch Process Simulation"),
+                                                             hr(),
+                                                             column(6,
+                                                                    plotOutput("plot_x_out_fb_sim",height = "200pt")
+                                                             ),
+                                                             column(6,
+                                                                    plotOutput("plot_p_out_fb_sim",height = "200pt")
+                                                             )
+                                                    ),
+                                                    
+                                                    fluidRow(
+                                                            
+                                                            column(6,
+                                                                   plotOutput("plot_s_out_fb_sim",height = "200pt")
                                                             ),
-                                                            
-                                                            fluidRow(
-                                                                    
-                                                                    column(6,
-                                                                           h3("Results ANOVA"),
-                                                                           tableOutput("table_result_out_anova"),
-                                                                           downloadButton("down_table_result_out_anova", "Download Table")
-                                                                    ),
-                                                                    column(6,
-                                                                           h3("Results Tukey"),
-                                                                           tableOutput("table_result_out_tukey"),
-                                                                           downloadButton("down_table_result_out_tukey", "Download Table")
-                                                                    )
-                                                                    
+                                                            column(6,
+                                                                   plotOutput("plot_v_out_fb_sim",height = "200pt")
                                                             )
-                                                            
-                                                            )
-                                                    
-                                            )
-                                   ),
-                                   #######################################################################################################
-                                   ##### Regression analysis section #####################################################################
-                                   tabPanel("Regression Analysis",
-                                            
-                                            add_busy_spinner(spin = "fading-circle"),
-                                            
-                                            h3("Regression Analysis"),
-                                   
-                                                     sidebarLayout(
-                                            
-                                                                     sidebarPanel(with = 4,
-                                                            
-                                                                             fileInput(inputId = "data_int_lr",label = "Enter the data",
-                                                                                       multiple = TRUE),
-                                                            
-                                                                             checkboxInput(inputId = "header_int_lr",label = "Head",
-                                                                                           value = TRUE),
-                                                                            
-                                                                             selectInput(inputId = "sheet_int_lr","Choose a sheet",
-                                                                                         list("1","2","3","4","5","6","7")),
-                                                                             
-                                                                             
-                                                                             conditionalPanel(condition = "output.myoutUI",
-                                                                                               
-                                                                                               uiOutput("more_controls")
-                                                                                               
-                                                                             ),
-                                                                             
-                                                                             actionButton(inputId = "make_plot_int_lr","Show plot"),
-                                                                             
-                                                                             actionButton("make_lr_int_lr","Make Simple Linear Regression"),
-                                                                             
-                                                                             checkboxInput(inputId = "select_mlr_int_lr",label = "Multiple regression",
-                                                                                           value = F),
-                                                                             
-                                                                             conditionalPanel(condition = "output.myoutUI2",
-                                                                                               
-                                                                                               uiOutput("more_controls2")
-                                                                                               
-                                                                             ),
-                                                                             
-                                                                             actionButton("make_mlr_int_lr", "Make Multiple Linear Regression")
-                                                                             
                                                     ),
                                                     
-                                                    mainPanel(
+                                                    # More widgets ####
+                                                    fluidRow(
+                                                            column(6, 
+                                                                   h3("Final mass values"),
+                                                                   hr(),
+                                                                   tableOutput("fin_mass_out_fb_sim") 
+                                                            )
+                                                    )
+                                            )         
+                                            #####
+                                    )
+                                    
+                                    #####
+                                    
+                           )
+                           
+                ),
+                
+                # Optimization section ########################################################################## 
+                navbarMenu("Optimization",
+                           
+                           # Kinetic parameter section ####
+                           tabPanel("Kinetic parameters",
+                                    
+                                    # For the LaTex code
+                                    withMathJax(),
+                                    
+                                    add_busy_spinner(spin = "fading-circle"),
+                                    
+                                    sidebarLayout(
+                                            
+                                            # Sidebar Panel optimization ####
+                                            sidebarPanel(
+                                                    
+                                                    # Eneter data ####
+                                                    
+                                                    fileInput(inputId = "data_int_opt", label = "Enter the data", multiple = FALSE,
+                                                              accept = c(".xlsx")),
+                                                    
+                                                    fluidRow(
                                                             
-                                                            fluidRow(
+                                                            column(6,
+                                                                   checkboxInput(inputId = "header_int_opt",label = "Head", value = TRUE)
+                                                                   
+                                                            )
+                                                    ),
+                                                    
+                                                    # Select model #####
+                                                    selectInput(inputId = "mod_int_opt",label = "Select a model",
+                                                                choices = list("Model 1 (Monod without inhibition by product)" = "model1.R",
+                                                                               "Model 2 (Monod with inhibition by product)" = "model2.R",
+                                                                               "Model 3 (Monod with product partially linked to growth)" = "model3.R",
+                                                                               "Model 4 (Monod with cell death)" = "model4.R",
+                                                                               "Model 5 (Monod with sustrate consumption for maintenance)" = "model5.R",
+                                                                               "Model 6 (Monod with inhibition by product and product partially linked to growth)" = "model6.R"),
+                                                                selected = "model1.R"),
+                                                    
+                                                    hr(),
+                                                    # Model 1 conditional panel ####################################
+                                                    conditionalPanel(condition = "output.parms_ui_mod1_opt",
+                                                                     
+                                                                     div(style = "text-align:center",
+                                                                         
+                                                                         h5("Kitnetic parameters"),
+                                                                         
+                                                                         fluidRow(
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "vmax_mod1_name_int_opt", label = "", 
+                                                                                                           choices =  "Vmax", selected = "Vmax")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "vmax_mod1_val_int_opt", label = "", value = 1.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "vmax_mod1_range_int_opt", label = "",
+                                                                                                          value = c(0, 3))
+                                                                                 )
+                                                                                 
+                                                                                 
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ks_mod1_name_int_opt",label = "", choices = "Ks", selected = "Ks")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ks_mod1_val_int_opt", label = "", value = 280)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ks_mod1_range_int_opt", label = "",
+                                                                                                          value = c(0, 400))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "yxs_mod1_name_int_opt",label = "", choices = "Yxs", selected = "Yxs")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "yxs_mod1_val_int_opt", label = "", value = 0.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "yxs_mod1_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ypx_mod1_name_int_opt", label = "", choices = "Ypx", selected = "Ypx")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ypx_mod1_val_int_opt", label = "", value = 4)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ypx_mod1_range_int_opt", label = "",
+                                                                                                          value = c(0, 20))
+                                                                                 )
+                                                                         ))
+                                                    ),
+                                                    
+                                                    # Model 2 conditional panel ####
+                                                    conditionalPanel(condition = "output.parms_ui_mod2_opt",
+                                                                     
+                                                                     div(style = "text-align:center",
+                                                                         h5("Kitnetic parameters"),
+                                                                         
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "vmax_mod2_name_int_opt",label = "", choices = "Vmax", selected = "Vmax")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "vmax_mod2_val_int_opt", label = "", value = 1.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "vmax_mod2_range_int_opt", label = "",
+                                                                                                          value = c(0, 3))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ks_mod2_name_int_opt",label = "", choices = "Ks", selected = "Ks")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ks_mod2_val_int_opt", label = "", value = 280)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ks_mod2_range_int_opt", label = "",
+                                                                                                          value = c(0, 400))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "yxs_mod2_name_int_opt", label = "", choices = "Yxs", selected = "Yxs")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "yxs_mod2_val_int_opt",label = "", value = 0.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "yxs_mod2_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ypx_mod2_name_int_opt", label = "", choices = "Ypx", selected = "Ypx")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ypx_mod2_val_int_opt",label = "", value = 4)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ypx_mod2_range_int_opt", label = "",
+                                                                                                          value = c(0, 20))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "kp_mod2_name_int_opt", label = "", choices = "Kp", selected = "Kp")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "kp_mod2_val_int_opt", label = "", value = 80)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "kp_mod2_range_int_opt", label = "",
+                                                                                                          value = c(0, 200))
+                                                                                 )
+                                                                         ))
+                                                                     
+                                                    ),
+                                                    
+                                                    # Model 3 conditional panel ####
+                                                    conditionalPanel(condition = "output.parms_ui_mod3_opt",
+                                                                     
+                                                                     div(style = "text-align:center",
+                                                                         h5("Kitnetic parameters"),
+                                                                         
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "vmax_mod3_name_int_opt", label = "", choices = "Vmax", selected = "Vmax")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "vmax_mod3_val_int_opt", label = "", value = 1.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "vmax_mod3_range_int_opt", label = "",
+                                                                                                          value = c(0, 3))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ks_mod3_name_int_opt", label = "", choices = "Ks", selected = "Ks")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ks_mod3_val_int_opt", label = "", value = 280)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ks_mod3_range_int_opt", label = "",
+                                                                                                          value = c(0, 400))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "yxs_mod3_name_int_opt", label = "", choices = "Yxs", selected = "Yxs")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "yxs_mod3_val_int_opt", label = "", value = 0.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "yxs_mod3_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "alpha_mod3_name_int_opt", label = "", choices = "alpha", selected = "alpha")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "alpha_mod3_val_int_opt", label = "", value = 4)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "alpha_mod3_range_int_opt", label = "",
+                                                                                                          value = c(0, 20))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "beta_mod3_name_int_opt", label = "", choices = "beta", selected = "beta")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "beta_mod3_val_int_opt", label = "", value = 0.01)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "beta_mod3_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         ))
+                                                                     
+                                                    ),
+                                                    
+                                                    # Model 4 conditional panel ####
+                                                    conditionalPanel(condition = "output.parms_ui_mod4_opt",
+                                                                     
+                                                                     div(style = "text-align:center",
+                                                                         h5("Kitnetic parameters"),
+                                                                         
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "vmax_mod4_name_int_opt", label = "", choices = "Vmax", selected = "Vmax")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "vmax_mod4_val_int_opt", label = "", value = 1.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "vmax_mod4_range_int_opt", label = "",
+                                                                                                          value = c(0, 3))
+                                                                                 )
+                                                                                 
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ks_mod4_name_int_opt", label = "", choices = "Ks", selected = "Ks")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ks_mod4_val_int_opt", label = "", value = 280)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ks_mod4_range_int_opt", label = "",
+                                                                                                          value = c(0, 400))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "yxs_mod4_name_int_opt", label = "", choices = "Yxs", selected = "Yxs")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "yxs_mod4_val_int_opt", label = "", value = 0.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "yxs_mod4_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ypx_mod4_name_int_opt", label = "", choices = "Ypx", selected = "Ypx")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ypx_mod4_val_int_opt", label = "", value = 4)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ypx_mod4_range_int_opt", label = "",
+                                                                                                          value = c(0, 20))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "kd_mod4_name_int_opt", label = "", choices = "Kd", selected = "Kd")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "kd_mod4_val_int_opt", label = "", value = 0.01)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "kd_mod4_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         ))
+                                                                     
+                                                    ),
+                                                    
+                                                    # Model 5 conditional panel ####
+                                                    
+                                                    conditionalPanel(condition = "output.parms_ui_mod5_opt",
+                                                                     
+                                                                     div(style = "text-align:center",
+                                                                         h5("Kitnetic parameters"),
+                                                                         
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "vmax_mod5_name_int_opt", label = "", choices = "Vmax", selected = "Vmax")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "vmax_mod5_val_int_opt", label = "", value = 1.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "vmax_mod5_range_int_opt", label = "",
+                                                                                                          value = c(0, 3))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ks_mod5_name_int_opt", label = "", choices = "Ks", selected = "Ks")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ks_mod5_val_int_opt", label = "", value = 280)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ks_mod5_range_int_opt", label = "",
+                                                                                                          value = c(0, 400))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "yxs_mod5_name_int_opt", label = "", choices = "Yxs", selected = "Yxs")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "yxs_mod5_val_int_opt", label = "", value = 0.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "yxs_mod5_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ypx_mod5_name_int_opt", label = "", choices = "Ypx", selected = "Ypx")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "ypx_mod5_val_int_opt", label = "", value = 4)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ypx_mod5_range_int_opt", label = "",
+                                                                                                          value = c(0, 20))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "km_mod5_name_int_opt", label = "", choices = "Km", selected = "Km")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "km_mod5_val_int_opt", label = "", value = 0.01)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "km_mod5_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         ))
+                                                                     
+                                                    ),
+                                                    
+                                                    # Model 6 conditional panel ####
+                                                    conditionalPanel(condition = "output.parms_ui_mod6_opt",
+                                                                     
+                                                                     div(style = "text-align:center",
+                                                                         h5("Kitnetic parameters"),
+                                                                         
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "vmax_mod6_name_int_opt", label = "", choices = "Vmax", selected = "Vmax")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "vmax_mod6_val_int_opt", label = "", value = 1.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "vmax_mod6_range_int_opt", label = "",
+                                                                                                          value = c(0, 3))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "ks_mod6_name_int_opt", label = "", choices = "Ks", selected = "Ks")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "ks_mod6_val_int_opt", label = "", value = 280)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "ks_mod6_range_int_opt", label = "",
+                                                                                                          value = c(0, 400))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "yxs_mod6_name_int_opt", label = "", choices = "Yxs", selected = "Yxs")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "yxs_mod6_val_int_opt", label = "", value = 0.2)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "yxs_mod6_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "alpha_mod6_name_int_opt", label = "", choices = "alpha", selected = "alpha")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "alpha_mod6_val_int_opt", label = "", value = 4)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "alpha_mod6_range_int_opt", label = "",
+                                                                                                          value = c(0, 20))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "kp_mod6_name_int_opt", label = "", choices = "Kp", selected = "Kp")  
+                                                                                 ),
+                                                                                 column(3, offset = 1,
+                                                                                        numericInput(inputId = "kp_mod6_val_int_opt", label = "", value = 80)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "kp_mod6_range_int_opt", label = "",
+                                                                                                          value = c(0, 200))
+                                                                                 )
+                                                                         )),
+                                                                     
+                                                                     div(style = "margin-top:-2em",
+                                                                         fluidRow(
+                                                                                 
+                                                                                 column(2,
+                                                                                        checkboxGroupInput(inputId = "beta_mod6_name_int_opt", label = "", choices = "beta", selected = "beta")  
+                                                                                 ),
+                                                                                 column(3, offset = 1, 
+                                                                                        numericInput(inputId = "beta_mod6_val_int_opt", label = "", value = 0.01)
+                                                                                 ),
+                                                                                 column(6,
+                                                                                        numericRangeInput(inputId = "beta_mod6_range_int_opt", label = "",
+                                                                                                          value = c(0, 1))
+                                                                                 )
+                                                                         ))
+                                                                     
+                                                                     
+                                                    ),
+                                                    hr(),
+                                                    # More widgets ####
+                                                    actionButton("make_opt_int_opt","Make optimization"),
+                                                    hr(),
+                                                    fluidRow(
+                                                            column(4, offset = 1, 
+                                                                   downloadButton(outputId = "down_data_plot_out_opt",label = "Data plot"),
+                                                                   hr(),
+                                                                   downloadButton(outputId = "down_opt_parm_out_opt",label = "Parameters")),
+                                                            column(4, offset = 1, 
+                                                                   downloadButton(outputId = "down_comp_plot_out_opt",label = "Comparison"),
+                                                                   hr(),
+                                                                   downloadButton(outputId = "down_ga_plot_out_opt",label = "GA output"))
+                                                    )
+                                                    
+                                            ),
+                                            
+                                            
+                                            # Main panel optimization #####
+                                            mainPanel(
+                                                    
+                                                    fluidRow(style = "margin-bottom: -3em; text-align:center",
+                                                             
+                                                             h3("Data"),
+                                                             hr(),
+                                                             column(3, offset = 1,
+                                                                    tableOutput("table_data_out_opt")
+                                                             ),
+                                                             column(6,offset = 2,
+                                                                    plotOutput("plot_data_out_opt",height = 300)
                                                                     
-                                                                    column(3,
-                                                                           h3("Data"),
-                                                                           tableOutput("table_data_out_lr")
+                                                             )
+                                                    ),
+                                                    
+                                                    fluidRow(style = "margin-bottom: -3em; text-align:center",
+                                                             # GA operators ####
+                                                             column(6,
+                                                                    h3("GA operators"),
+                                                                    hr(),
+                                                                    column(6,
+                                                                           numericInput(inputId = "pop_size_int_opt", label = "Population size",
+                                                                                        value = 50),
                                                                            
-                                                                           ),
-                                                                    column(8, offset = 1,
-                                                                           h3("Scatter Plot"),
-                                                                           plotOutput("plot_data_out_lr"))
-                                                            
+                                                                           numericInput(inputId = "num_gen_int_opt", label = "Number of generations",
+                                                                                        value = 100),
+                                                                           numericInput(inputId = "run_int_opt", label = "Run",
+                                                                                        value = 100)
                                                                     ),
-                                                            
-                                                            fluidRow(
+                                                                    column(6,
+                                                                           numericInput(inputId = "cross_prob_int_opt", label = "Crossover prob",
+                                                                                        value = 0.8),
+                                                                           numericInput(inputId = "mut_prob_int_opt",label = "Mutation prob",
+                                                                                        value = 0.1),
+                                                                           numericInput(inputId = "max_fit_int_opt",label = "Tolerance",
+                                                                                        value = 100)
+                                                                           
+                                                                    )
                                                                     
-                                                                    column(4,
-                                                                           h3("Results: Simple Linear Regression"),
-                                                                           tableOutput("table_result_out_lr")),
-                                                                    column(4,
-                                                                           h3("Results: Multiple Linear Regression"),
-                                                                           tableOutput("table_result_out_mlr"))
-                                                            )
+                                                             ),
+                                                             
+                                                             # GA results ####
+                                                             column(6, 
+                                                                    h3("Comparison"),
+                                                                    hr(),
+                                                                    plotOutput("plot_result_out_opt", height = 300)
+                                                             ) 
+                                                             
+                                                    ),
                                                     
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             column(6,
+                                                                    h3("GA output"),
+                                                                    hr(),
+                                                                    tableOutput("ga_out_out_opt")
+                                                             ),
+                                                             column(6, 
+                                                                    h3("GA progress"),
+                                                                    hr(),
+                                                                    plotOutput("plot_ga_out_opt")
+                                                             )
                                                     )
                                                     
-                                                    
                                             )
+                                    )
+                                    #####
+                           ),
+                           # Fed-Batch section #####
+                           tabPanel("Fed-Batch",
+                                    #####
+                                    
+                                    # For the LaTex code
+                                    withMathJax(), 
+                                    
+                                    # For the wait
+                                    add_busy_spinner(spin = "fading-circle"),
+                                    
+                                    sidebarLayout(
                                             
-                                   )
-                                   
-                        )
-                        
+                                            sidebarPanel(
+                                                    # Initial conditions #####
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             p("Initial conditions"),
+                                                             
+                                                             column(4,
+                                                                    numericInput(inputId = "x_int_fb_opt",label = helpText('$$x_{0} \\ (g/L)$$'),value = 0.2)),
+                                                             
+                                                             column(4, 
+                                                                    numericInput(inputId = "s_int_fb_opt",label = helpText('$$s_{0} \\ (g/L)$$'),value = 40)),
+                                                             
+                                                             column(4, 
+                                                                    numericInput(inputId = "p_int_fb_opt",label = helpText('$$p_{0} \\ (g/L)$$'),value = 0))
+                                                             
+                                                             
+                                                    ),
+                                                    
+                                                    
+                                                    hr(),
+                                                    
+                                                    # Kinetic parameters ####
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             p("Kinetic parameters"),
+                                                             
+                                                             column(4,  
+                                                                    
+                                                                    
+                                                                    numericInput(inputId = "vmax_int_fb_opt",label = helpText('$$v_{max} \\ (1/h)$$'),value = 1.2),
+                                                                    numericInput(inputId = "ypx_int_fb_opt",label = helpText('$$Y_{px}$$'),value = 4)),
+                                                                    
+                                                             
+                                                             column(4,
+                                                                    
+                                                                    numericInput(inputId = "ks_int_fb_opt",label = helpText('$$K_{s} \\ (g/L)$$'),value = 280),
+                                                                    numericInput(inputId = "ki_int_fb_opt",label = helpText('$$K_{i} \\ (g/L)$$'),value = 10)),
+                                                                    
+                                                             
+                                                             column(4, 
+                                                                    
+                                                                    numericInput(inputId = "yxs_int_fb_opt",label = helpText('$$Y_{xs}$$'),value = 0.2))
+                                                                    
+                                                    ),
+                                                    
+                                                    hr(),
+                                                    
+                                                    # GA operators ####
+                                                    fluidRow(style = "text-align:center",
+                                                             p("GA operators"),
+                                                             column(6,
+                                                                    numericInput(inputId = "pop_size_int_fb_opt", label = "Population size",
+                                                                                 value = 10),
+                                                                    
+                                                                    numericInput(inputId = "num_gen_int_fb_opt", label = "Number of generations",
+                                                                                 value = 10),
+                                                                    numericInput(inputId = "run_int_fb_opt", label = "Run",
+                                                                                 value = 10)
+                                                             ),
+                                                             column(6,
+                                                                    numericInput(inputId = "cross_prob_int_fb_opt", label = "Crossover prob",
+                                                                                 value = 0.8),
+                                                                    numericInput(inputId = "mut_prob_int_fb_opt",label = "Mutation prob",
+                                                                                 value = 0.1)
+                                                                    
+                                                             )
+                                                    ),
+                                                    
+                                                    hr(),
+                                                    # More widgets ####
+                                                    fluidRow(
+                                                            column(4, offset = 1,
+                                                                   downloadButton("down_fit_plot_out_fb_opt", "Fitness Plot"),
+                                                                   hr(),
+                                                                   downloadButton("down_ga_plot_out_fb_opt", "GA Plot")
+                                                            ),
+                                                            column(4, offset = 1,
+                                                                   downloadButton("down_ga_out_out_fb_opt", "GA out")
+                                                            )
+                                                            
+                                                    )
+                                            ),
+                                            # main panel ####
+                                            mainPanel(
+                                                    
+                                                    fluidRow(style = "text-align:center",
+                                                             
+                                                             column(6,
+                                                                    h3("Fitness function"),
+                                                                    hr(),
+                                                                    plotOutput("plot_fitness_out_fb_opt")     
+                                                             ),
+                                                             column(6,
+                                                                    # Operation parameters ####
+                                                                    p("Operation parameters"),
+                                                                    
+                                                                    column(5, offset = 1, 
+                                                                           
+                                                                           numericInput(inputId = "V0_int_fb_opt",label = helpText('$$V_{0} \\ (L)$$'),value = 10),
+                                                                           
+                                                                           selectInput(inputId = "end_time_int_fb_opt",label = "Simulation time (h)",
+                                                                                       choices = list("12","24","48","60","100"), selected = "100"),
+                                                                           
+                                                                           numericInput(inputId = "tf_int_fb_opt",label = "Stop (h)",value = 100),
+                                                                           
+                                                                           br(),
+                                                                           
+                                                                           actionButton("make_opt_int_fb_opt", "Make optimization")
+                                                                           
+                                                                    ),
+                                                                    
+                                                                    column(6, 
+                                                                           
+                                                                           sliderInput(inputId = "sin_int_fb_opt", label = helpText('$$s_{in}$$'),
+                                                                                       min = 0, max = 50, value = 40, step = 5, post = "g/L"),
+                                                                           
+                                                                           sliderInput(inputId = "Vlim_int_fb_opt",label = helpText('$$V_{Lim}$$'),
+                                                                                       min = 5, max = 300, value = 300, step = 5, post = "L"),
+                                                                           
+                                                                           numericRangeInput(inputId = "Q_int_fb_opt", label = "Interval (L/h)",
+                                                                                             value = c(0, 5))
+                                                                           
+                                                                    )
+                                                                    
+                                                             )
+                                                    ),
+                                                    
+                                                    fluidRow(style = "text-align:center",
+                                                             # GA output ####
+                                                             
+                                                             column(4,  offset = 1,
+                                                                    
+                                                                    h3("GA output"),
+                                                                    hr(),
+                                                                    tableOutput("ga_out_out_fb_opt")  
+                                                             ),
+                                                             column(6, offset = 1,
+                                                                    
+                                                                    h3("GA progress"),
+                                                                    hr(),
+                                                                    plotOutput("plot_ga_out_fb_opt")
+                                                             )
+                                                             
+                                                    )
+                                                    #####
+                                            )
+                                    )
+                                    
+                                    #####
+                           )
+                           
+                ) 
 )
+
+
 ###########################################################################################################
 ###########################################################################################################
-###########################################################################################################
-##### server ##############################################################################################      
+# server ##############################################################################################      
 server = function(input, output, session) {
         
-                # Simulation section ########################################################
+        # Simulation section ##########################################################
+        # Batch process section #############################
+        # Select the panel with the parameters of the model ####
+        output$parms_mod1_ui_sim <- reactive({
+                ifelse(input$mod_int_sim == "model_1", TRUE, FALSE)
+        })
         
-                # Select the panel with the parameters of the model #
-                output$model1_rec_sim <- reactive({
-                        ifelse(input$mod_int_sim == "model_1", T,F)
-                })
+        output$parms_mod2_ui_sim <- reactive({
+                ifelse(input$mod_int_sim == "model_2", TRUE, FALSE)
+        })
+        
+        output$parms_mod3_ui_sim <- reactive({
+                ifelse(input$mod_int_sim == "model_3", TRUE, FALSE)
+        })
+        
+        output$parms_mod4_ui_sim <- reactive({
+                ifelse(input$mod_int_sim == "model_4", TRUE, FALSE)
+        })
+        
+        output$parms_mod5_ui_sim <- reactive({
+                ifelse(input$mod_int_sim == "model_5", TRUE, FALSE)
+        })
+        
+        output$parms_mod6_ui_sim <- reactive({
+                ifelse(input$mod_int_sim == "model_6", TRUE, FALSE)
+        })
+        
+        outputOptions(output, "parms_mod1_ui_sim", suspendWhenHidden = FALSE)
+        outputOptions(output, "parms_mod2_ui_sim", suspendWhenHidden = FALSE) 
+        outputOptions(output, "parms_mod3_ui_sim", suspendWhenHidden = FALSE) 
+        outputOptions(output, "parms_mod4_ui_sim", suspendWhenHidden = FALSE) 
+        outputOptions(output, "parms_mod5_ui_sim", suspendWhenHidden = FALSE) 
+        outputOptions(output, "parms_mod6_ui_sim", suspendWhenHidden = FALSE) 
+        
+        # Reactive values ####
+        s_rec_sim <- reactive({
                 
-                output$model2_rec_sim <- reactive({
-                        ifelse(input$mod_int_sim == "model_2", T,F)
-                })
+                c(x = input$x_int_sim, p = input$p_int_sim, s = input$s_int_sim)
                 
-                output$model3_rec_sim <- reactive({
-                        ifelse(input$mod_int_sim == "model_3", T,F)
-                })
-                
-                
-                output$model4_rec_sim <- reactive({
-                        ifelse(input$mod_int_sim == "model_4", T,F)
-                })
-                
-                output$model5_rec_sim <- reactive({
-                        ifelse(input$mod_int_sim == "model_5", T,F)
-                })
-                
-                output$model6_rec_sim <- reactive({
-                        ifelse(input$mod_int_sim == "model_6", T,F)
-                })
-                
-                outputOptions(output, "model1_rec_sim", suspendWhenHidden = FALSE)
-                outputOptions(output, "model2_rec_sim", suspendWhenHidden = FALSE) 
-                outputOptions(output, "model3_rec_sim", suspendWhenHidden = FALSE) 
-                outputOptions(output, "model4_rec_sim", suspendWhenHidden = FALSE) 
-                outputOptions(output, "model5_rec_sim", suspendWhenHidden = FALSE) 
-                outputOptions(output, "model6_rec_sim", suspendWhenHidden = FALSE) 
-                
-                
-                # Set intitial condition  
-                s_rec_sim <- reactive({c(x = input$x_int_sim, p = input$p_int_sim, s = input$s_int_sim)})
-                
-                # Set parameters
-                p_rec_sim <- reactiveValues(p = vector(mode = "numeric"))
-                
-                observe({
+        })
+        
+        p_rec_val_sim <- reactiveValues(rec_val = vector(mode = "numeric"))
+        
+        # Select model and parameters ####
+        observe({
                 
                 if (input$mod_int_sim == "model_1") { 
                         
-                        p_rec_sim$p <- c(Vmax = input$vmax_mod1_int_sim, Ks = input$ks_mod1_int_sim, 
-                                  Yxs = input$yxs_mod1_int_sim, Ypx = input$ypx_mod1_int_sim)
-                }
+                        source("model1.R")
                         
+                        p_rec_val_sim$rec_val <- c(Vmax = input$vmax_mod1_int_sim, Ks = input$ks_mod1_int_sim, 
+                                                   Yxs = input$yxs_mod1_int_sim, Ypx = input$ypx_mod1_int_sim)
+                        
+                        
+                }
+                
                 else if (input$mod_int_sim == "model_2") { 
                         
-                        p_rec_sim$p <- c(Vmax = input$vmax_mod2_int_sim, Ks = input$ks_mod2_int_sim,
-                                  Yxs = input$yxs_mod2_int_sim, Ypx = input$ypx_mod2_int_sim,
-                                  Kp = input$kp_mod2_int_sim)
-                }
+                        source("model2.R")
                         
+                        p_rec_val_sim$rec_val <- c(Vmax = input$vmax_mod2_int_sim, Ks = input$ks_mod2_int_sim,
+                                                   Yxs = input$yxs_mod2_int_sim, Ypx = input$ypx_mod2_int_sim,
+                                                   Kp = input$kp_mod2_int_sim)
+                }
+                
                 else if (input$mod_int_sim == "model_3") { 
                         
-                        p_rec_sim$p <- c(Vmax = input$vmax_mod3_int_sim, Ks = input$ks_mod3_int_sim, 
-                                  Yxs = input$yxs_mod3_int_sim, alpha = input$alpha_mod3_int_sim,
-                                  beta = input$beta_mod3_int_sim)
+                        source("model3.R")
+                        
+                        p_rec_val_sim$rec_val <- c(Vmax = input$vmax_mod3_int_sim, Ks = input$ks_mod3_int_sim, 
+                                                   Yxs = input$yxs_mod3_int_sim, alpha = input$alpha_mod3_int_sim,
+                                                   beta = input$beta_mod3_int_sim)
                 }
+                
+                else if (input$mod_int_sim == "model_4") {
                         
-                else if (input$mod_int_sim == "model_4") { 
+                        source("model4.R")
                         
-                        p_rec_sim$p <- c(Vmax = input$vmax_mod4_int_sim, Ks = input$ks_mod4_int_sim,
-                                  Yxs = input$yxs_mod4_int_sim, Ypx = input$ypx_mod4_int_sim,
-                                  Kd = input$kd_mod4_int_sim)
+                        p_rec_val_sim$rec_val <- c(Vmax = input$vmax_mod4_int_sim, Ks = input$ks_mod4_int_sim,
+                                                   Yxs = input$yxs_mod4_int_sim, Ypx = input$ypx_mod4_int_sim,
+                                                   Kd = input$kd_mod4_int_sim)
                 }
-                        
+                
                 else if (input$mod_int_sim == "model_5"){ 
                         
-                        p_rec_sim$p <- c(Vmax = input$vmax_mod5_int_sim, Ks = input$ks_mod5_int_sim,
-                                  Yxs = input$yxs_mod5_int_sim, Ypx = input$ypx_mod5_int_sim,
-                                  Km = input$km_mod5_int_sim)
+                        source("model5.R")
+                        
+                        p_rec_val_sim$rec_val <- c(Vmax = input$vmax_mod5_int_sim, Ks = input$ks_mod5_int_sim,
+                                                   Yxs = input$yxs_mod5_int_sim, Ypx = input$ypx_mod5_int_sim,
+                                                   Km = input$km_mod5_int_sim)
                         
                 }
+                
+                else {     
+                        source("model6.R")
                         
-                else {         
-                        p_rec_sim$p <- c(Vmax = input$vmax_mod6_int_sim, Ks = input$ks_mod6_int_sim, 
-                                 Yxs = input$yxs_mod6_int_sim, alpha = input$alpha_mod6_int_sim, 
-                                 Kp = input$kp_mod6_int_sim, beta = input$beta_mod6_int_sim)
-                                
+                        p_rec_val_sim$rec_val <- c(Vmax = input$vmax_mod6_int_sim, Ks = input$ks_mod6_int_sim, 
+                                                   Yxs = input$yxs_mod6_int_sim, alpha = input$alpha_mod6_int_sim, 
+                                                   Kp = input$kp_mod6_int_sim, beta = input$beta_mod6_int_sim)
+                        
                 }        
-                        
-               
-                })
-                
-                # Load the model #
-                observe({
-                        
-                        if (input$mod_int_sim == "model_1") {
-                                
-                                source("model1.R")
-                                
-                        }
-                        
-                        else if(input$mod_int_sim == "model_2") {
-                                
-                                source("model2.R")
-                        }
-                        
-                        else if(input$mod_int_sim == "model_3") {
-                                
-                                source("model3.R") 
-                        }
-                        
-                        else if(input$mod_int_sim == "model_4") {
-                                
-                                source("model4.R")  
-                        }
-                        
-                        else if(input$mod_int_sim == "model_5") {
-                                
-                                source("model5.R")  
-                        }
-                        
-                        else {
-                                
-                                source("model6.R")  
-                        }
-                        
-                     
-                })
-                
-                output$plot_result_out_sim <- renderPlot({
-                        
-                        make_simulation_fun_sim(s_rec_sim(), p_rec_sim$p)
-                })
-                
-                output$down_plot_result_out_sim <- downloadHandler(
-                        filename = function() {
-                                paste("data-", ".png", sep="")
-                        },
-                        content = function(file) {
-                                
-                                ggsave(file,make_simulation_fun_sim(s_rec_sim(), p_rec_sim$p),
-                                       width = 10, height = 8)
-                        }
-                )
-                
-                # Show mathematical model #
-                output$ui_out_sim <- renderUI({
-                        if (input$mod_int_sim == "model_1") {
-                                withMathJax(
-                                        helpText('Model 1 (Monod without inhibition by product): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x$$'),
-                                        helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x$$'),
-                                        helpText('$$\\frac{dp}{dt} = y_{px}* v_{max}*\\frac{s}{k_{s}+s}*x$$')
-                                )
-                        }
-                        else if (input$mod_int_sim == "model_2") {
-                                withMathJax(
-                                        helpText('Model 2 (Monod with inhibition by product): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*\\frac{k_{p}}{k_{p}+p}*x$$'),
-                                        helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*\\frac{k_{p}}{k_{p}+p}*x$$'),
-                                        helpText('$$\\frac{dp}{dt} = y_{px}*v_{max}*\\frac{s}{k_{s}+s}*\\frac{k_{p}}{k_{p}+p}*x$$')
-                                )
-                        }
-                        else if (input$mod_int_sim == "model_3") {
-                                withMathJax(
-                                        helpText('Model 3 (Monod with product partially linked to growth): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x$$'),
-                                        helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x$$'),
-                                        helpText('$$\\frac{dp}{dt} = \\alpha*v_{max}*\\frac{s}{k_{s}+s}*x + \\beta*x$$')
-                                )
-                        }
-                        else if (input$mod_int_sim == "model_4") {
-                                withMathJax(
-                                        helpText('Model 4 (Monod with cell death): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x - k_{d}*x$$'),
-                                        helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x$$'),
-                                        helpText('$$\\frac{dp}{dt} = y_{px}* v_{max}*\\frac{s}{k_{s}+s}*x$$')
-                                )
-                        }
-                        else if (input$mod_int_sim == "model_5") {
-                                withMathJax(
-                                        helpText('Model 5 (Monod with sustrate consumption for maintenance): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x$$'),
-                                        helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x - k_{m}*x$$'),
-                                        helpText('$$\\frac{dp}{dt} = y_{px}* v_{max}*\\frac{s}{k_{s}+s}*x$$')
-                                )
-                        }
-                        
-                        else {
-                                withMathJax(
-                                        helpText('Model 6 (with inhibition by product and product partially linked to growt):  $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*\\frac{k_{p}}{k_{p}+p}*x$$'),
-                                        helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x - k_{m}*x$$'),
-                                        helpText('$$\\frac{dp}{dt} = \\alpha*v_{max}*\\frac{s}{k_{s}+s}*x + \\beta*x$$')
-                                )
-                        }
-                })
-                
-                # Show network
-                output$network_out_sim <- renderImage({
-                        if (is.null(input$mod_int_sim))
-                                return(NULL)
-                        
-                        if (input$mod_int_sim == "model_1") {
-                                return(list(
-                                        src = "www/network1.png",
-                                        contentType = "image/png",
-                                        alt = "Network",height = 180,width = 320
-                                ))
-                        } else if (input$mod_int_sim == "model_2") {
-                                return(list(
-                                        src = "www/network2.png",
-                                        contentType = "image/png",
-                                        alt = "Network",height = 175,width = 300
-                                ))
-                        } else if (input$mod_int_sim == "model_3") {
-                                return(list(
-                                        src = "www/network3.png",
-                                        contentType = "image/png",
-                                        alt = "Network",height = 220,width = 380
-                                ))
-                        } else if (input$mod_int_sim == "model_4") {
-                                return(list(
-                                        src = "www/network4.png",
-                                        contentType = "image/png",
-                                        alt = "Network",height = 250,width = 290
-                                ))
-                        } else if (input$mod_int_sim == "model_5") {
-                                return(list(
-                                        src = "www/network5.png",
-                                        contentType = "image/png",
-                                        alt = "Network",height = 300,width = 290
-                                ))
-                        } else {
-                                return(list(
-                                        src = "www/network6.png",
-                                        contentType = "image/png",
-                                        alt = "Network",height = 220,width = 380
-                                ))
-                        }
-                        
-                }, deleteFile = FALSE)
-                
-                #########################################################################################
-                ### Optimization section ################################################################
-                
-                # Load the data #
-                df_rec_opt <- reactive({
-                        read.xlsx(input$data_int_opt$datapath, header = TRUE, 
-                                  sheetIndex = as.numeric(input$sheet_int_opt))
-                })
-                
-                # Show data #
-                output$table_data_out_opt <- renderTable({
-                        
-                        req(input$data_int_opt)
-                        
-                        if(input$header_int_opt) {
-                                return(head(df_rec_opt(),8))
-                        }
-                        else {
-                                return(df_rec_opt())
-                        }
-                        
-                })
-                
-                # Plot the data #
-                output$plot_data_out_opt <- renderPlot({
-                        
-                        req(input$data_int_opt)
-                        
-                        plot_data_fun_opt(df_rec_opt())
-                        
-                        
-                })
-                
-                output$down_plot_data_out_opt <- downloadHandler(
-                        
-                        filename = function() {
-                                
-                                paste("data_optimization", ".png", sep="")
-                        },
-                        
-                        content = function(file) {
-                                
-                                ggsave(file,plot_data_fun_opt(df_rec_opt()),
-                                       width = 10, height = 8)
-                        }
-                )
                 
                 
-                # Get the optimized parameters #
-                opt_parms_rec_opt <- eventReactive(input$make_opt_int_opt, {
-                        
-                        if (input$mod_int_opt == "model_1") {
-                                
-                                source("model1.R")
-                                
-                        }
-                        
-                        else if(input$mod_int_opt == "model_2") {
-                                
-                                source("model2.R")
-                        }
-                        
-                        else if(input$mod_int_opt == "model_3") {
-                                
-                                source("model3.R") 
-                        }
-                        
-                        else if(input$mod_int_opt == "model_4") {
-                                
-                                source("model4.R")  
-                        }
-                        
-                        else {
-                                
-                                source("model5.R")  
-                        }
-                        
-                        get_parms_fun_opt(df_rec_opt())
-                })
+        })
+        
+        # Make simulation ####
+        make_sim_rec_sim <- reactive({
                 
-                # Show optimized parameters #
-                output$table_result_out_opt <- renderTable({
-                        
-                        data.frame("Parameter" = c(names(opt_parms_rec_opt()$optimized_parameters),"Fitness value"),
-                                   "Results" = c(opt_parms_rec_opt()$optimized_parameters,
-                                                 opt_parms_rec_opt()$fitness_value))
-                        
-                })
+                make_sim_fun_sim(s_rec_sim(), 
+                                 p_rec_val_sim$rec_val,
+                                 as.numeric(input$step_int_sim), 
+                                 as.numeric(input$interval_int_sim))
+        })
+        
+        # Plot simulation ####
+        plot_sim_rec_sim <- reactive({
                 
-                output$down_table_result_out_opt <- downloadHandler(
-                        
-                        filename = function() {
-                                
-                                paste("result_optimization", ".csv", sep="")
-                                
-                        },
-                        
-                        content = function(file) {
-                                
-                                write.csv(data.frame("Parameter" = c(names(opt_parms_rec_opt()$optimized_parameters),"fitness_value"),
-                                                 "Results" = c(opt_parms_rec_opt()$optimized_parameters,
-                                                               opt_parms_rec_opt()$fitness_value)), file,row.names = F)
-                                
-                        }
-                )
+                plot_sim_fun_sim(make_sim_rec_sim())      
+        })
+        
+        output$plot_sim_out_sim <- renderPlot({
                 
+                plot_sim_rec_sim()
+        })
+        
+        # Download simulation plot #####
+        output$down_plot_out_sim <- downloadHandler(
+                filename = function() {
+                        paste("simulation_plot", ".png", sep = "")
+                },
+                content = function(file) {
+                        
+                        ggsave(file, plot_sim_rec_sim(),
+                               width = 10, height = 8)
+                }
+        )
+        
+        # Download simulation data ####
+        output$down_data_out_sim <- downloadHandler(
+                filename = function() {
+                        paste("simulation_data", ".xlsx", sep = "")
+                },
+                content = function(file) {
+                        write.xlsx(make_sim_rec_sim(), file, row.names = FALSE)
+                }
+        )
+        
+        # Show final concentrations ####
+        end_conc_rec_sim <- reactive({
                 
-                # Plot results of optimization #
-                output$plot_result_out_opt <- renderPlot({
-                        
-                        req(input$data_int_opt)
-                        
-                        comp_fun_opt(opt_parms_rec_opt()$optimized_parameters)
-                })
+                end_conc_fun_sim(make_sim_rec_sim())
+        })
+        
+        output$end_conc_out_sim <- renderTable({
                 
-                output$down_plot_result_out_opt <- downloadHandler(
-                        filename = function() {
-                                paste("result_optimization", ".png", sep="")
-                        },
-                        content = function(file) {
-                                
-                                ggsave(file,comp_fun_opt(opt_parms_rec_opt()$optimized_parameters),
-                                       width = 10, height = 8)
-                        }
-                )
+                end_conc_rec_sim()
                 
-                
-                #############################################################################################
-                #### t-test section #########################################################################
-                
-                df_rec_tst <- reactive({
-                        req(input$data_int_tst)
-                        read.xlsx(input$data_int_tst$datapath, header = T, sheetIndex = as.numeric(input$sheet_int_tst))
-                })
-                
-                # Show table with data
-                output$table_data_out_tst <- renderTable({
-                        req(input$data_int_tst)
-                        
-                        if(input$header_int_tst) {
-                                return(head(df_rec_tst()))
-                        }
-                        else {
-                                return(df_rec_tst())
-                        }
-                        
-                })
-                
-                # Show boxplot
-                output$plot_data_out_tst <- renderPlot({
-                        
-                        make_boxplot_fun_sta(df_rec_tst())
-                })
-                
-                output$down_plot_data_out_tst <- downloadHandler(
-                        
-                        filename = function() {
-                                
-                                paste("data_plot",".png",sep = "")
-                        },
-                        
-                        content = function(file) {
-                          ggsave(file, make_boxplot_fun_sta(df_rec_tst()), width = 10,height = 8)      
-                        })
-                
-                # Make t-test
-                tst_rec_tst <- eventReactive(input$make_tst_int_tst,{
-                        
-                        make_sts_fun_sts(df_rec_tst())
-                })
-                
-                # Show resutls
-                output$table_result_out_tst <- renderTable({
-                        
-                        tst_rec_tst()
-                })
-                
-                output$down_table_result_out_tst <- downloadHandler(
-                        
-                        filename = function() {
-                                
-                                paste("data_result",".csv",sep = "")
-                        },
-                        
-                        content = function(file) {
-                                
-                                write.csv(tst_rec_tst(),file, row.names = F)
-                        }
-                )
-                
-                #############################################################################################################
-                ### ANOVA and Tukey section #################################################################################
-                
-                # Load data
-                df_rec_anova <- reactive({
-                        req(input$data_int_anova)
-                        read.xlsx(input$data_int_anova$datapath, header = TRUE, sheetIndex = as.numeric(input$sheet_int_anova))
-                })
-                
-                # Show table with data
-                output$table_data_out_anova <- renderTable({
-                        
-                        req(input$data_int_anova)
-                        
-                        if(input$header_int_anova) {
-                                
-                                return(head(df_rec_anova()))
-                        }
-                        
-                        else {
-                                
-                                return(df_rec_anova())
-                                
-                        }
-                        
-                })
-                
-                # Show boxplot
-                output$plot_data_out_anova <- renderPlot({
-                        
-                        make_boxplot_fun_sta(df_rec_anova())
-                })
-                
-                output$down_plot_data_out_anova <- downloadHandler(
-                        
-                        filename = function() {
-                                
-                                paste("plot_data",".png",sep = "")
-                        },
-                        
-                        content = function(file) {
-                                
-                                ggsave(file, make_boxplot_fun_sta(df_rec_anova()), width = 12, height = 10)
-                        }
-                )
-                
-                # Make ANOVA analysis
-                anova_rec_anova <- eventReactive(input$make_anova_int_anova ,{
-                        
-                        make_anova_fun_anova(df_rec_anova())
-                })
-
-                # Show resutls
-                output$table_result_out_anova <- renderTable({
-                        
-                        make_result_anova_fun_anova(anova_rec_anova())
-
-                })
-                
-                output$down_table_result_out_anova <- downloadHandler(
-                        
-                        filename = function() {
-                                
-                                paste("result_anova",".csv",sep = "")
-                        },
-                        
-                        content = function(file) {
-                                
-                                write.csv(make_result_anova_fun_anova(anova_rec_anova()), file, row.names = F)
-                        }
-                )
-                
-                # Make tukey test
-                tukey_rec_tukey <- eventReactive(input$make_tukey_int_tukey ,{
-                        
-                        make_tukey_fun_tukey(df_rec_anova())
-                })
-                
-                # Show resutls
-                output$table_result_out_tukey <- renderTable({
-                        
-                        tukey_rec_tukey()
-                })
-                
-                output$down_table_result_out_tukey <- downloadHandler(
-                        
-                        filename = function() {
-                                paste("result_tukey",".csv",sep = "")
-                        },
-                        
-                        content = function(file) {
-                                
-                                write.csv(tukey_rec_tukey(),file,row.names = F)
-                        }
-                )
-                
-                means_rec_anova <- reactive({
-                        
-                        make_means_fun_anova(df_rec_anova())
-                })
-                
-                output$table_means_out_anova <- renderTable({
-                        
-                        means_rec_anova()
-                })
-                
-       
-                ###########################################################################################################
-                ### Linear regression section #############################################################################
-                
-                # Load data
-                df_rec_lr <- reactive({
-                        
-                        req(input$data_int_lr)
-                        
-                        read.xlsx(input$data_int_lr$datapath, header = TRUE, sheetIndex = as.numeric(input$sheet_int_lr))%>% 
-                                
-                                select_if(~sum(!is.na(.)) > 0)
-                })
-                
-                
-                # Get data column names
-                colname_rec_lr <- reactive({
-                        
-                        req(input$data_int_lr)
-                        
-                        colnames(df_rec_lr())
-                }) 
-                
-                # Create panel 
-                output$more_controls <- renderUI({
-                        
-                        tagList(
-                                
-                                fluidRow(
-                                        column(5,
-                                               selectInput("varx", "Choose variable x", colname_rec_lr(),colname_rec_lr()[1])
-                                        ),
-                                        column(5,
-                                               selectInput("vary", "Choose variable y", colname_rec_lr(),colname_rec_lr()[2])
-                                        )
-                                )
+        }, striped = TRUE, spacing = "m", align = "c", digits = 3)
+        
+        # Show mathematical model ####
+        output$ui_out_sim <- renderUI({
+                if (input$mod_int_sim == "model_1") {
+                        withMathJax(
+                                helpText('Model 1 (Monod without inhibition by product): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x$$'),
+                                helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x$$'),
+                                helpText('$$\\frac{dp}{dt} = y_{px}* v_{max}*\\frac{s}{k_{s}+s}*x$$')
                         )
-                })
-                
-                # Generate panel only if it is required
-                output$myoutUI <- reactive({
-                        
-                        ifelse(class(df_rec_lr) =="data.frame" ,T,F)
-                })
-                
-                outputOptions(output, "myoutUI", suspendWhenHidden = FALSE)
-                
-                # Create panel for multiple regression
-                output$more_controls2 <- renderUI({
-                        
-                        tagList(
-                                
-                                fluidRow(
-                                        column(5,
-                                               checkboxGroupInput("var_ind", "Choose independent variables", colname_rec_lr())
-                                        ),
-                                        column(5,
-                                               selectInput("var_dep", "Choose dependent variable", colname_rec_lr())
-                                        )
-                                )
+                }
+                else if (input$mod_int_sim == "model_2") {
+                        withMathJax(
+                                helpText('Model 2 (Monod with inhibition by product): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*\\frac{k_{p}}{k_{p}+p}*x$$'),
+                                helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*\\frac{k_{p}}{k_{p}+p}*x$$'),
+                                helpText('$$\\frac{dp}{dt} = y_{px}*v_{max}*\\frac{s}{k_{s}+s}*\\frac{k_{p}}{k_{p}+p}*x$$')
                         )
-                })
+                }
+                else if (input$mod_int_sim == "model_3") {
+                        withMathJax(
+                                helpText('Model 3 (Monod with product partially linked to growth): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x$$'),
+                                helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x$$'),
+                                helpText('$$\\frac{dp}{dt} = \\alpha*v_{max}*\\frac{s}{k_{s}+s}*x + \\beta*x$$')
+                        )
+                }
+                else if (input$mod_int_sim == "model_4") {
+                        withMathJax(
+                                helpText('Model 4 (Monod with cell death): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x - k_{d}*x$$'),
+                                helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x$$'),
+                                helpText('$$\\frac{dp}{dt} = y_{px}* v_{max}*\\frac{s}{k_{s}+s}*x$$')
+                        )
+                }
+                else if (input$mod_int_sim == "model_5") {
+                        withMathJax(
+                                helpText('Model 5 (Monod with sustrate consumption for maintenance): $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*x$$'),
+                                helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x - k_{m}*x$$'),
+                                helpText('$$\\frac{dp}{dt} = y_{px}* v_{max}*\\frac{s}{k_{s}+s}*x$$')
+                        )
+                }
                 
-                # Generate panel only if it is required
-                output$myoutUI2 <- reactive({
-                        
-                        ifelse(input$select_mlr_int_lr,T,F)
-                })
+                else {
+                        withMathJax(
+                                helpText('Model 6 (with inhibition by product and product partially linked to growt):  $$\\frac{dx}{dt} = v_{max}*\\frac{s}{k_{s}+s}*\\frac{k_{p}}{k_{p}+p}*x$$'),
+                                helpText('$$\\frac{ds}{dt} = \\left(-\\frac{1}{y_{xs}}\\right)*v_{max}*\\frac{s}{k_{s}+s}*x$$'),
+                                helpText('$$\\frac{dp}{dt} = \\alpha*v_{max}*\\frac{s}{k_{s}+s}*x + \\beta*x$$')
+                        )
+                }
+        })
+        
+        # Show network ####
+        output$network_out_sim <- renderImage({
+                if (is.null(input$mod_int_sim))
+                        return(NULL)
                 
-                outputOptions(output, "myoutUI2", suspendWhenHidden = FALSE)
+                if (input$mod_int_sim == "model_1") {
+                        return(list(
+                                src = "www/network1.png",
+                                contentType = "image/png",
+                                alt = "Network",height = 150,width = 250
+                        ))
+                } else if (input$mod_int_sim == "model_2") {
+                        return(list(
+                                src = "www/network2.png",
+                                contentType = "image/png",
+                                alt = "Network",height = 150,width = 250
+                        ))
+                } else if (input$mod_int_sim == "model_3") {
+                        return(list(
+                                src = "www/network3.png",
+                                contentType = "image/png",
+                                alt = "Network",height = 200,width = 300
+                        ))
+                } else if (input$mod_int_sim == "model_4") {
+                        return(list(
+                                src = "www/network4.png",
+                                contentType = "image/png",
+                                alt = "Network",height = 250,width = 250
+                        ))
+                } else if (input$mod_int_sim == "model_5") {
+                        return(list(
+                                src = "www/network5.png",
+                                contentType = "image/png",
+                                alt = "Network",height = 250,width = 250
+                        ))
+                } else {
+                        return(list(
+                                src = "www/network6.png",
+                                contentType = "image/png",
+                                alt = "Network",height = 200,width = 300
+                        ))
+                }
                 
-                # Show table with data
-                output$table_data_out_lr <- renderTable({
-                        
-                        req(input$data_int_lr)
-                        
-                        if(input$header_int_lr) {
-                                
-                                return(head(df_rec_lr()))
-                        }
-                        
-                        else {
-                                
-                                return(df_rec_lr())
-                                
-                        }
-                        
-                })
+        }, deleteFile = FALSE)
+        
+        ######################################################
+        # Fed-batch process section ##########################
+        # Show network ####
+        output$network_out_fb_sim <- renderImage({
+                list(
+                        src = "www/network7.png",
+                        contentType = "image/png",
+                        alt = "Network",height = 200,width = 250
+                )
+        }, deleteFile = FALSE)
+        
+        # Reactive state and parameters ####
+        s_rec_val_fb_sim <- reactiveValues(rec_val = numeric())
+        p_rec_val_fb_sim <- reactiveValues(rec_val = numeric())
+        
+        observe({
                 
-                # Make scatter plot
-                plot_rec_lr <- eventReactive(input$make_plot_int_lr,{
-                        
-                        req(input$data_int_lr)
-                        
-                        make_scatter_fun_lr(df_rec_lr(),input$varx,input$vary)
-                })
+                # Change state and parameters
+                s_rec_val_fb_sim$rec_val <- c(x = input$x_int_fb_sim, p = input$p_int_fb_sim,
+                                              s = input$s_int_fb_sim, V = input$V0_int_fb_sim)
                 
-                output$plot_data_out_lr <- renderPlot({
-                        
-                        plot_rec_lr()
-                }) 
+                p_rec_val_fb_sim$rec_val <- c(Vmax = input$vmax_int_fb_sim, Ks = input$ks_int_fb_sim,
+                                              Ki = input$ki_int_fb_sim, Yxs = input$yxs_int_fb_sim, 
+                                              Ypx = input$ypx_int_fb_sim, Q = input$Q_int_fb_sim,
+                                              sin = input$sin_int_fb_sim, tf = input$tf_int_fb_sim, 
+                                              Vlim = input$Vlim_int_fb_sim) 
+        })
+        
+        # Make simulation ####
+        out_rec_fb_sim <- reactive({
                 
-                # Make linear regression analysis
-                make_lr_rec_lr <- eventReactive(input$make_lr_int_lr ,{
-                        
-                        make_lr_fun_lr(df_rec_lr(),input$varx,input$vary)
-                        
-                })
+                fed_batch_fun_fb_sim(s_rec_val_fb_sim$rec_val, 
+                                     p_rec_val_fb_sim$rec_val,
+                                     as.numeric(input$step_int_fb_sim),
+                                     as.numeric(input$end_time_int_fb_sim))
+        })
+        # Download simulation data ####
+        output$down_data_out_fb_sim <- downloadHandler(
+                filename = function() {
+                        paste("simulation_data", ".xlsx", sep = "")
+                },
+                content = function(file) {
+                        write.xlsx(out_rec_fb_sim(), file, row.names = FALSE)
+                }
+        )
+        ##
+        # Show simulation ####
+        output$plot_x_out_fb_sim <- renderPlot({
                 
-                # Show resutls
-                output$table_result_out_lr <- renderTable({
-                        
-                        make_lr_rec_lr()
-                        
-                })
+                plot_var_fun_fb_sim(data = out_rec_fb_sim(), var = "x", label = "Biomass concentration (g/L)")
+        })
+        
+        output$plot_p_out_fb_sim <- renderPlot({
                 
-                # Make linear regression analysis
-                make_mlr_rec_lr <- eventReactive(input$make_mlr_int_lr ,{
-                        
-                        make_lr_fun_lr(df_rec_lr(),input$var_ind,input$var_dep)
-                        
-                })
+                plot_var_fun_fb_sim(data = out_rec_fb_sim(), var = "s", label = "Substrate concentration (g/L)")
+        })
+        
+        output$plot_s_out_fb_sim <- renderPlot({
                 
-                # Show resutls
-                output$table_result_out_mlr <- renderTable({
-                        
-                        make_mlr_rec_lr()
-                        
-                })    
+                plot_var_fun_fb_sim(data = out_rec_fb_sim(), var = "Q", label = "Inflow velocity (L/h)")
+        })
+        
+        output$plot_v_out_fb_sim <- renderPlot({
                 
+                plot_var_fun_fb_sim(data = out_rec_fb_sim(), var = "V", label = "Volume (L)")
+        })
+        
+        # Final mass values ####
+        fin_mass_rec_val_fb_sim <- reactiveValues(rec_val = data.frame())
+        
+        # Reactive values ####
+        observe({
+                
+                
+                # To calculate substrate consumption 
+                n <- nrow(out_rec_fb_sim())
+                ind <- which(out_rec_fb_sim()[,6] == 0)[1]
+                ind <- ifelse(is.na(ind), n, ind)
+                tf <- out_rec_fb_sim()[ind,1]
+                
+                # biomass            # product                    
+                end_val_aux <- round(c(out_rec_fb_sim()[n,2], out_rec_fb_sim()[n,3],
+                                       # substrate            # volume
+                                       out_rec_fb_sim()[n,4], out_rec_fb_sim()[n,5]), 2)
+                
+                fin_mass_rec_val_fb_sim$rec_val <- list(
+                        
+                        mx = paste0(round(end_val_aux[1]*end_val_aux[4],2), " (g)"),
+                        
+                        mp = paste0(round(end_val_aux[2]*end_val_aux[4],2), " (g)"),
+                        
+                        ms = paste0(round(input$Q_int_fb_sim*input$sin_int_fb_sim*(tf - 0),2), " (g)"),
+                        
+                        Fitness = paste0(round((end_val_aux[1] + end_val_aux[2])*end_val_aux[4] - 
+                                                       input$Q_int_fb_sim*input$sin_int_fb_sim*(tf - 0),2), " (g)")
+                )
+                
+                
+                
+        })
+        
+        
+        output$fin_mass_out_fb_sim <- renderTable({
+                
+                fin_mass_rec_val_fb_sim$rec_val
+                
+        }, striped = TRUE, spacing = "m", align = "c", digits = 3)
+        
+        
+        ################################################################################
+        # Optimization section #########################################################
+        # Batch process section #############################
+        # Select the panel with the parameters of the model ####
+        # Show model 1 panel 
+        output$parms_ui_mod1_opt <- reactive({
+                
+                ifelse(input$mod_int_opt == "model1.R", TRUE, FALSE)
+        })
+        
+        outputOptions(output, "parms_ui_mod1_opt", suspendWhenHidden = FALSE)
+        
+        # Show model 2 panel
+        output$parms_ui_mod2_opt <- reactive({
+                
+                ifelse(input$mod_int_opt == "model2.R", TRUE, FALSE)
+        })
+        
+        outputOptions(output, "parms_ui_mod2_opt", suspendWhenHidden = FALSE)
+        
+        # Show model 3 panel
+        output$parms_ui_mod3_opt <- reactive({
+                
+                ifelse(input$mod_int_opt == "model3.R", TRUE, FALSE)
+        })
+        
+        outputOptions(output, "parms_ui_mod3_opt", suspendWhenHidden = FALSE)
+        
+        # Show model 4 panel
+        output$parms_ui_mod4_opt <- reactive({
+                
+                ifelse(input$mod_int_opt == "model4.R", TRUE, FALSE)
+        })
+        
+        outputOptions(output, "parms_ui_mod4_opt", suspendWhenHidden = FALSE)
+        
+        # Show model 5 panel
+        output$parms_ui_mod5_opt <- reactive({
+                
+                ifelse(input$mod_int_opt == "model5.R", TRUE, FALSE)
+        })
+        
+        outputOptions(output, "parms_ui_mod5_opt", suspendWhenHidden = FALSE)
+        
+        # Show model 6 panel
+        output$parms_ui_mod6_opt <- reactive({
+                
+                ifelse(input$mod_int_opt == "model6.R", TRUE, FALSE)
+        })
+        
+        outputOptions(output, "parms_ui_mod6_opt", suspendWhenHidden = FALSE)
+        # Reactive values ####
+        # Save parameters's values 
+        p_val_rec_opt <- reactiveValues(rec_val = numeric())
+        
+        # Save parameters's names to be optimized
+        p_name_rec_opt <- reactiveValues(rec_val = character())
+        
+        # Save parameters's ranges to be optimized
+        p_range_rec_opt <- reactiveValues(rec_val = list())
+        
+        model_rec_val_opt <- reactiveValues(rec_val = character())
+        
+        # Update parameters ####
+        observe({
+                
+                if (input$mod_int_opt == "model1.R") {
+                        
+                        
+                        p_val_rec_opt$rec_val <- c(Vmax = input$vmax_mod1_val_int_opt, Ks =  input$ks_mod1_val_int_opt,
+                                                   Yxs = input$yxs_mod1_val_int_opt, Ypx =  input$ypx_mod1_val_int_opt)
+                        
+                        
+                        p_name_rec_opt$rec_val <- c(input$vmax_mod1_name_int_opt, input$ks_mod1_name_int_opt,
+                                                    input$yxs_mod1_name_int_opt, input$ypx_mod1_name_int_opt)
+                        
+                        p_range_rec_opt$rec_val <- list(Vmax = input$vmax_mod1_range_int_opt, Ks =  input$ks_mod1_range_int_opt,
+                                                        Yxs = input$yxs_mod1_range_int_opt, Ypx =  input$ypx_mod1_range_int_opt)
+                        
+                }
+                
+                # Load model 2 ####
+                else if(input$mod_int_opt == "model2.R") {
+                        
+                        p_val_rec_opt$rec_val <- c(Vmax = input$vmax_mod2_val_int_opt, Ks =  input$ks_mod2_val_int_opt,
+                                                   Yxs = input$yxs_mod2_val_int_opt, Ypx =  input$ypx_mod2_val_int_opt,
+                                                   Kp =  input$kp_mod2_val_int_opt)
+                        
+                        
+                        p_name_rec_opt$rec_val <- c(input$vmax_mod2_name_int_opt, input$ks_mod2_name_int_opt,
+                                                    input$yxs_mod2_name_int_opt, input$ypx_mod2_name_int_opt,
+                                                    input$kp_mod2_name_int_opt)
+                        
+                        p_range_rec_opt$rec_val <- list(Vmax = input$vmax_mod2_range_int_opt, Ks =  input$ks_mod2_range_int_opt,
+                                                        Yxs = input$yxs_mod2_range_int_opt, Ypx =  input$ypx_mod2_range_int_opt,
+                                                        Kp =  input$kp_mod2_range_int_opt)
+                }
+                
+                # Load model 3 ####
+                else if(input$mod_int_opt == "model3.R") {
+                        
+                        
+                        p_val_rec_opt$rec_val <- c(Vmax = input$vmax_mod3_val_int_opt, Ks =  input$ks_mod3_val_int_opt,
+                                                   Yxs = input$yxs_mod3_val_int_opt, alpha =  input$alpha_mod3_val_int_opt,
+                                                   beta =  input$beta_mod3_val_int_opt)
+                        
+                        
+                        p_name_rec_opt$rec_val <- c(input$vmax_mod3_name_int_opt, input$ks_mod3_name_int_opt,
+                                                    input$yxs_mod3_name_int_opt, input$alpha_mod3_name_int_opt,
+                                                    input$beta_mod3_name_int_opt)
+                        
+                        p_range_rec_opt$rec_val <- list(Vmax = input$vmax_mod3_range_int_opt, Ks =  input$ks_mod3_range_int_opt,
+                                                        Yxs = input$yxs_mod3_range_int_opt, alpha =  input$alpha_mod3_range_int_opt,
+                                                        beta =  input$beta_mod3_range_int_opt)
+                }
+                
+                # Load model 4 ####
+                else if(input$mod_int_opt == "model4.R") { 
+                        
+                        
+                        p_val_rec_opt$rec_val <- c(Vmax = input$vmax_mod4_val_int_opt, Ks =  input$ks_mod4_val_int_opt,
+                                                   Yxs = input$yxs_mod4_val_int_opt, Ypx =  input$ypx_mod4_val_int_opt,
+                                                   Kd =  input$kd_mod4_val_int_opt)
+                        
+                        
+                        p_name_rec_opt$rec_val <- c(input$vmax_mod4_name_int_opt, input$ks_mod4_name_int_opt,
+                                                    input$yxs_mod4_name_int_opt, input$ypx_mod4_name_int_opt,
+                                                    input$kd_mod4_name_int_opt)
+                        
+                        p_range_rec_opt$rec_val <- list(Vmax = input$vmax_mod4_range_int_opt, Ks =  input$ks_mod4_range_int_opt,
+                                                        Yxs = input$yxs_mod4_range_int_opt, Ypx =  input$ypx_mod4_range_int_opt,
+                                                        Kd =  input$kd_mod4_range_int_opt)
+                }
+                
+                # Load model 5 ####
+                else if(input$mod_int_opt == "model5.R") {
+                        
+                        
+                        p_val_rec_opt$rec_val <- c(Vmax = input$vmax_mod5_val_int_opt, Ks =  input$ks_mod5_val_int_opt,
+                                                   Yxs = input$yxs_mod5_val_int_opt, Ypx =  input$ypx_mod5_val_int_opt,
+                                                   Km =  input$km_mod5_val_int_opt)
+                        
+                        
+                        p_name_rec_opt$rec_val <- c(input$vmax_mod5_name_int_opt, input$ks_mod5_name_int_opt,
+                                                    input$yxs_mod5_name_int_opt, input$ypx_mod5_name_int_opt,
+                                                    input$km_mod5_name_int_opt)
+                        
+                        p_range_rec_opt$rec_val <- list(Vmax = input$vmax_mod5_range_int_opt, Ks =  input$ks_mod5_range_int_opt,
+                                                        Yxs = input$yxs_mod5_range_int_opt, Ypx =  input$ypx_mod5_range_int_opt,
+                                                        Km =  input$km_mod5_range_int_opt)
+                }
+                
+                # Load model 6 ####
+                else  {
+                        
+                        
+                        p_val_rec_opt$rec_val <- c(Vmax = input$vmax_mod6_val_int_opt, Ks =  input$ks_mod6_val_int_opt,
+                                                   Yxs = input$yxs_mod6_val_int_opt, alpha =  input$alpha_mod6_val_int_opt,
+                                                   Kp =  input$kp_mod6_val_int_opt, beta =  input$beta_mod6_val_int_opt)
+                        
+                        
+                        p_name_rec_opt$rec_val <- c(input$vmax_mod6_name_int_opt, input$ks_mod6_name_int_opt,
+                                                    input$yxs_mod6_name_int_opt, input$alpha_mod6_name_int_opt,
+                                                    input$kp_mod6_name_int_opt, input$beta_mod6_name_int_opt)
+                        
+                        p_range_rec_opt$rec_val <- list(Vmax = input$vmax_mod6_range_int_opt, Ks =  input$ks_mod6_range_int_opt,
+                                                        Yxs = input$yxs_mod6_range_int_opt, alpha =  input$alpha_mod6_range_int_opt,
+                                                        Kp =  input$kp_mod6_range_int_opt, beta =  input$beta_mod6_range_int_opt)
+                }
+        })
+        
+        # Load the model ####
+        
+        observeEvent(input$make_opt_int_opt,{
+                
+                
+                if (input$mod_int_opt == "model1.R") {
+                        
+                        source("model1.R")
+                }
+                else if (input$mod_int_opt == "model2.R") {
+                        
+                        source("model2.R")
+                }
+                else if (input$mod_int_opt == "model3.R") {
+                        
+                        source("model3.R")
+                }
+                else if (input$mod_int_opt == "model4.R") {
+                        
+                        source("model4.R")
+                }
+                else if (input$mod_int_opt == "model5.R") {
+                        
+                        source("model5.R")
+                }
+                else {
+                        
+                        source("model6.R")
+                }
+                
+        })
+        
+        # Load the data ####
+        df_rec_opt <- reactive({
+                
+                read.xlsx(input$data_int_opt$datapath, header = TRUE, 
+                          sheetIndex = 1) %>% filter(!is.na(time)) %>% select(time,x,p,s)
+        })
+        
+        # Show data ####
+        output$table_data_out_opt <- renderTable({
+                
+                req(input$data_int_opt)
+                
+                if(input$header_int_opt) {
+                        
+                        return(head(df_rec_opt()))
+                }
+                
+                else {
+                        return(df_rec_opt())
+                }
+                
+        })
+        
+        # Plot data ####
+        output$plot_data_out_opt <- renderPlot({
+                
+                req(input$data_int_opt)
+                
+                plot_data_fun_opt(df_rec_opt())
+                
+        })
+        
+        output$down_data_plot_out_opt <- downloadHandler(
+                
+                filename = function() {
+                        
+                        paste("data_plot", ".png", sep="")
+                },
+                
+                content = function(file) {
+                        
+                        ggsave(file,plot_data_fun_opt(df_rec_opt()),
+                               width = 10, height = 8)
+                }
+        )
+        
+        # Get optimized parameters ####
+        opt_parms_rec_opt <- eventReactive(input$make_opt_int_opt, {
+                
+                
+                req(input$data_int_opt)
+                req(p_name_rec_opt$rec_val)
+                
+                get_parms_fun_opt(df_rec_opt(),
+                              p_val_rec_opt$rec_val,
+                              p_name_rec_opt$rec_val,
+                              p_range_rec_opt$rec_val, 
+                              input$pop_size_int_opt,
+                              input$num_gen_int_opt,
+                              input$run_int_opt,
+                              input$cross_prob_int_opt,
+                              input$mut_prob_int_opt, 
+                              input$max_fit_int_opt)
+                
+        })
+        
+        # Show comparison plot ####
+        comp_rec_opt <- eventReactive(input$make_opt_int_opt ,{
+                
+                req(input$data_int_opt)
+                comp_fun_opt(opt_parms_rec_opt()[["values"]], df_rec_opt())
+        })
+        
+        output$plot_result_out_opt <- renderPlot({
+                
+                comp_rec_opt()
+                
+        })
+        
+        # Download comparison plot #####
+        output$down_comp_plot_out_opt <- downloadHandler(
+                filename = function() {
+                        paste("comparison_plot", ".png", sep = "")
+                },
+                content = function(file) {
+                        
+                        ggsave(file, comp_rec_opt(),
+                               width = 10, height = 8)
+                }
+        )
+        
+        # GA output ####
+        output$ga_out_out_opt <- renderTable({
+                
+                opt_parms_rec_opt()[["ga_out"]]
+                
+        }, striped = TRUE, colnames = FALSE, spacing = "m", align = "l", digits = 3)
+        
+        # Download simulation data ####
+        output$down_opt_parm_out_opt <- downloadHandler(
+                filename = function() {
+                        paste("kinetic_parameters", ".xlsx", sep = "")
+                },
+                content = function(file) {
+                        write.xlsx(opt_parms_rec_opt()[["ga_out"]], file, row.names = FALSE)
+                }
+        )
+        
+        # Plot GA progress ####
+        plot_ga_rec_opt <- reactive({
+                
+                req(input$data_int_opt)
+                plot_ga_fun_opt(opt_parms_rec_opt()[["GA"]])
+        })
+        
+        output$plot_ga_out_opt <- renderPlot({
+                
+                plot_ga_rec_opt()
+                
+        })
+        
+        # Download GA plot #####
+        output$down_ga_plot_out_opt <- downloadHandler(
+                filename = function() {
+                        paste("ga_plot", ".png", sep = "")
+                },
+                content = function(file) {
+                        
+                        png(file)
+                        plot_ga_fun_opt(opt_parms_rec_opt()[["GA"]])
+                        dev.off()
+                }
+        )
+        
+        ######################################################
+        # Fed-batch process section ##########################
+        # Reactive state and parameters ####
+        s_rec_val_fb_opt <- reactiveValues(rec_val = numeric())
+        p_rec_val_fb_opt <- reactiveValues(rec_val = numeric())
+        
+        # Change initial state and parameter vector ####
+        observe({
+                
+                s_rec_val_fb_opt$rec_val <- c(x = input$x_int_fb_opt, p = input$p_int_fb_opt,
+                                              s = input$s_int_fb_opt, V = input$V0_int_fb_opt)
+                
+                p_rec_val_fb_opt$rec_val <- c(Vmax = input$vmax_int_fb_opt, Ks = input$ks_int_fb_opt, 
+                                              Ki = input$ki_int_fb_opt, Yxs = input$yxs_int_fb_opt, 
+                                              Ypx = input$ypx_int_fb_opt, Q = 0, sin = input$sin_int_fb_opt,
+                                              tf = input$tf_int_fb_opt, Vlim = input$Vlim_int_fb_opt) 
+        })
+        
+        # Plot fitness function ####
+        plot_fitness_rec_fb_opt <- reactive({
+                
+                plot_fitness_fun_fb_opt(input$Vlim_int_fb_opt, 
+                                        input$sin_int_fb_opt,
+                                        s_rec_val_fb_opt$rec_val, 
+                                        p_rec_val_fb_opt$rec_val, 
+                                        input$end_time_int_fb_opt, 
+                                        input$Q_int_fb_opt)
+                
+        })
+        
+        
+        output$plot_fitness_out_fb_opt <- renderPlot({
+                
+                plot_fitness_rec_fb_opt()
+        })
+        
+        
+        # Download fitness plot #####
+        output$down_fit_plot_out_fb_opt <- downloadHandler(
+                filename = function() {
+                        paste("fitness_plot", ".png", sep = "")
+                },
+                content = function(file) {
+                        
+                        ggsave(file, plot_fitness_rec_fb_opt(),
+                               width = 10, height = 8)
+                }
+        )
+        # Make optimization ####
+        
+        get_Q_rec_fb_opt <- eventReactive(input$make_opt_int_fb_opt, {
+                
+                get_Q_fun_fb_opt(input$pop_size_int_fb_opt, 
+                                 input$num_gen_int_fb_opt,
+                                 input$cross_prob_int_fb_opt, 
+                                 input$mut_prob_int_fb_opt,
+                                 input$run_int_fb_opt,
+                                 s_rec_val_fb_opt$rec_val, 
+                                 p_rec_val_fb_opt$rec_val, 
+                                 input$Q_int_fb_opt,
+                                 input$end_time_int_fb_opt)
+                
+        })
+        
+        # GA output ####
+        output$ga_out_out_fb_opt <- renderTable({
+                
+                get_Q_rec_fb_opt()[["ga_out"]]
+                
+        }, striped = TRUE, colnames = FALSE, spacing = "m", align = "l", digits = 3)
+        
+        # Download ga output ####
+        output$down_ga_out_out_fb_opt <- downloadHandler(
+                filename = function() {
+                        paste("ga_output", ".xlsx", sep = "")
+                },
+                content = function(file) {
+                        write.xlsx(get_Q_rec_fb_opt()[["ga_out"]], file, row.names = FALSE)
+                }
+        )
+        
+        # Plot GA progress ####
+        output$plot_ga_out_fb_opt <- renderPlot({
+                
+                plot_ga_fun_fb_opt(get_Q_rec_fb_opt()[["GA"]])
+        })
+        
+        # Download GA plot #####
+        output$down_ga_plot_out_fb_opt <- downloadHandler(
+                filename = function() {
+                        paste("ga_plot", ".png", sep = "")
+                },
+                content = function(file) {
+                        
+                        png(file)
+                        plot_ga_fun_fb_opt(get_Q_rec_fb_opt()[["GA"]])
+                        dev.off()
+                }
+        )
 }
 
-
-
 shinyApp(ui, server)
-
-                                                   
