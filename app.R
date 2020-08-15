@@ -18,10 +18,10 @@ library( shinyWidgets)
 # Load function.R script ######################################
 source("functions.R")
 
-# ui #################################################
+# ui #################################################################################################
 ui = navbarPage("Fermentation Analysis", theme = shinytheme("spacelab"),
                 
-                # Simulation section ########################################################################## 
+                # Simulation section #### 
                 navbarMenu("Simulation",
                            
                            # Batch process section ###########################################                   
@@ -1682,7 +1682,7 @@ server = function(input, output, session) {
         model_rec_val_opt <- reactiveValues(rec_val = character())
         
         # Update parameters ####
-        observe({
+        observeEvent(input$make_opt_int_opt, { # colcar make_opt_inp_opt
                 
                 if (input$mod_int_opt == "model1.R") {
                         
@@ -1699,7 +1699,7 @@ server = function(input, output, session) {
                         
                 }
                 
-                # Load model 2 ####
+                
                 else if(input$mod_int_opt == "model2.R") {
                         
                         p_val_rec_opt$rec_val <- c(Vmax = input$vmax_mod2_val_int_opt, Ks =  input$ks_mod2_val_int_opt,
@@ -1716,7 +1716,7 @@ server = function(input, output, session) {
                                                         Kp =  input$kp_mod2_range_int_opt)
                 }
                 
-                # Load model 3 ####
+                
                 else if(input$mod_int_opt == "model3.R") {
                         
                         
@@ -1734,7 +1734,7 @@ server = function(input, output, session) {
                                                         beta =  input$beta_mod3_range_int_opt)
                 }
                 
-                # Load model 4 ####
+                
                 else if(input$mod_int_opt == "model4.R") { 
                         
                         
@@ -1752,7 +1752,7 @@ server = function(input, output, session) {
                                                         Kd =  input$kd_mod4_range_int_opt)
                 }
                 
-                # Load model 5 ####
+               
                 else if(input$mod_int_opt == "model5.R") {
                         
                         
@@ -1770,7 +1770,7 @@ server = function(input, output, session) {
                                                         Km =  input$km_mod5_range_int_opt)
                 }
                 
-                # Load model 6 ####
+                
                 else  {
                         
                         
