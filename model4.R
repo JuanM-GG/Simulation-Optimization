@@ -1,4 +1,4 @@
-# Growth without inhinition and with cell death (model4)
+# Growth without inhinition and with cell death
 # Juan Manuel
 # 21/06/20
 # Note: This model donesn't consider any type of inhibition and also 
