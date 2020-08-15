@@ -1,5 +1,5 @@
 # Growth without inhinition and with substrate consumption for
-# maintenance (model5)
+# maintenance
 # Juan Manuel
 # 21/06/20
 # Note: This model doesn't consider inihibition by product, however, it 
@@ -11,6 +11,10 @@
 model <-function(time, parms, state) {
         with(as.list(c(parms,state)),{
                 
+                if(s <= 0) {
+                        
+                        Km <- 0
+                }
                 #  reaction kinetic rates 
                 v <- Vmax*s/(Ks+s)
                 
