@@ -1,235 +1,429 @@
+####################################################################################### 
 # Data analysis using kinetic models
-# Juan Manuel Gutiérrez García
-# Note: This script is used to apply different models on all the 
-# data sets and determine which model is the best for each one 
+# Juan Manuel GutiÃ©rrez GarcÃ­a
+# Note: 
+#########################################################################################
 
-
-##### Simulation section ####################################################################
-# Values required
-#s <- c(x=0.2,p=0,s=40)
-
-# Function that simulates a model
-make_simulation_fun_sim <- function(s,p) {
+# Simulation section ####################################################################
+# Batch process  subsection #######################
+# make_sim_rec_sim ####
+make_sim_fun_sim <- function(s, p, step, interval) {
         
-        ode(y = s,
-            times = seq(0,60,4),
-            func = model,
-            parms = p,
-            method = "rk4") %>% as.data.frame() %>%
+        times <- seq(0,interval,step)
+        
+        data <- ode(y = s,
+                    times = times,
+                    func = model,
+                    parms = p,
+                    method = "rk4") %>% as.data.frame() 
+        
+        return(data)
+        
+}
+
+# Function to plot simulation ####
+plot_sim_fun_sim <- function(data) {
+        
+        ggplot(data) + 
+                geom_line(mapping = aes(x = time, y = s, color = "s"), size = 1.5) + 
+                geom_line(mapping = aes(x = time, y = x, color = "x"), size = 1.5) +
+                geom_line(mapping = aes(x = time, y = p,color = "p"), size = 1.5) + 
+                labs(x = "Time (h)", y = "Concentration (g/L)", color = NULL) +
+                theme_bw() +
+                theme(
+                        axis.text = element_text(size = 10, face = "bold",
+                                                 colour = "black",hjust = "0.5",vjust = "1"),
+                        
+                        axis.title.y = element_text(size = 15, angle = 90,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 1),
+                        
+                        axis.title.x = element_text(size = 15, angle = 0,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 0),
+                        legend.position  = "top",
+                        
+                        legend.justification  = "top",
+                        
+                        legend.title = element_text(size = 15, face = "bold"),
+                        
+                        legend.text = element_text(size = 15, colour = "black",face = "bold")
+                )
+}
+
+# end_conc_fun_sim ####
+end_conc_fun_sim <- function(data) {
+        
+        n <- nrow(data)
+        
+        end_conc <- list(
                 
-                ggplot() + 
-                geom_line(mapping = aes(x = time, y = s, color = "s"), size=1.5) + 
-                geom_line(mapping = aes(x = time, y = x, color = "x"), size=1.5) +
-                geom_line(mapping = aes(x = time, y = p,color = "p"), size=1.5) + 
-                labs(x = "time (h)", y = "concentration (g/L)")+
-                theme_bw() 
+                x = paste0(round(data$x[n], 3), " (g/L)"),
+                p = paste0(round(data$p[n], 3), " (g/L)"),
+                s = paste0(round(data$s[n], 3), " (g/L)")
+                        
+                        )
+        
+        return(end_conc)
+        
 }
-#############################################################################################
-##### Optimization section ##################################################################
-# Function to show data #
+# Fed-batch simulation subsection #################
+# fed_batch_fun_fb_sim ####
+fed_batch_fun_fb_sim <- function(s, p, step, end_time) {
+        
+        out <- ode(y = s, times = seq(0, end_time, step), func = model_fb_fun_fb_sim, parms = p, method = "rk4") %>%
+                
+                as.data.frame()
+        
+}
+
+# Fed_batch_model #####
+model_fb_fun_fb_sim <- function(time, parms ,state) {
+        
+        with(as.list(c(parms, state)),{
+                
+                #  reaction kinetic rate 
+                v <- Vmax*s/(Ks+s+s^2/Ki)
+                
+                if(V >= Vlim || time >= tf) {
+                        
+                        Q <- 0
+                        
+                } 
+                
+                # Differential equations
+                dx <- v*x - (Q/V)*x
+                dp <- Ypx*v*x - (Q/V)*p
+                ds <- -(1/Yxs)*v*x + (Q/V)*sin
+                dV <- Q
+                
+                return(list(c(dx,dp,ds,dV), Q = Q))
+        })
+}
+
+# Function to plot fed batch simulation #####
+plot_var_fun_fb_sim <- function(data, var, label) {
+        
+        ls <- max(data[,var], na.rm = TRUE)
+        
+        ggplot(data = data, aes(x = time)) +
+                
+                geom_line(aes(y = .data[[var]]), size = 1, alpha = 1/2) +
+                
+                ylab(label) +
+                
+                xlab("Time (h)") +
+                
+                theme_light() +
+                
+                theme(
+                        axis.text = element_text(size = 10, face = "bold",
+                                                 colour = "black",hjust = "0.5",vjust = "1"),
+                        
+                        axis.title.y = element_text(size = 10, angle = 90,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 1),
+                        
+                        axis.title.x = element_text(size = 10, angle = 0,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 0)
+                )
+}
+
+# Optimization section ####################################################################
+# Batch process subsection #################################
+# Function to show data ####
 plot_data_fun_opt <- function(data) {
-        ggplot(data = data) + 
-                geom_point(mapping = aes(x = time, y = s, color = "s"), size = 3) + 
-                geom_point(mapping = aes(x = time, y = x, color = "x"), size = 3) +
-                geom_point(mapping = aes(x = time, y = p,color = "p"), size = 3) + 
-                labs(x = "time (h)", y = "concentration (g/L)")+
-                theme_bw()
+        ggplot(data) + 
+                geom_point(mapping = aes(x = time, y = s, color = "s"), size = 2) + 
+                geom_point(mapping = aes(x = time, y = x, color = "x"), size = 2) +
+                geom_point(mapping = aes(x = time, y = p,color = "p"), size = 2) + 
+                labs(x = "Time (h)", y = "Concentration (g/L)", color = NULL) +
+                theme_bw() +
+                theme(
+                        axis.text = element_text(size = 10, face = "bold",
+                                                 colour = "black",hjust = "0.5",vjust = "1"),
+                        
+                        axis.title.y = element_text(size = 15, angle = 90,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 1),
+                        
+                        axis.title.x = element_text(size = 15, angle = 0,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 0),
+                        legend.position  = "top",
+                        
+                        legend.justification  = "top",
+                        
+                        legend.title = element_text(size = 15, face = "bold"),
+                        
+                        legend.text = element_text(size = 15, colour = "black",face = "bold")
+                )
 }
 
-# Function to get optimized parameters #
-get_parms_fun_opt <- function(data) {
+# get_parms_fun_opt #####
+get_parms_fun_opt <- function(data, p_val, p_name, p_range, pop_size, 
+                              generations, run, cross_prob, mut_prob, max_fit) {
         
-        # Let's do this in order to opt_data be reached by cost_fun_opt() 
-        # and comp_fun_opt() function
-        opt_data <<- data
+        # Select parameters to optimize ####
+        opt_parms <- p_val[p_name]
+
+        # No optimized parameters
+        no_opt_parms <- p_val[!(names(p_val) %in% names(opt_parms))]
+
+        # Select interval of parameters to optimize
+        opt_p_range <- p_range[p_name]
+
+        lower <- sapply(opt_p_range, min)
+
+        upper <- sapply(opt_p_range, max)
+
+        # Using GA to get parameters #####
+        GA <- ga(type = 'real-valued',
+                        fitness = fitness_fun_opt,
+                        data,
+                        opt_parms,
+                        no_opt_parms,
+                        lower = lower,
+                        upper = upper,
+                        crossover = gareal_blxCrossover, # To improve the optimization
+                        popSize = pop_size, #400
+                        pcrossover = cross_prob, #
+                        pmutation = mut_prob, #
+                        names = names(opt_parms),
+                        maxiter = generations, #10
+                        maxFitness = -max_fit,
+                        run =  run)
+
+        # Optimized parameters
+        opt_parms <- GA@solution %>% as.data.frame() %>% unlist()
+
+        opt_parm_names <- paste0(names(opt_parms),"*")
+
+        # Fitness value
+        fit_val <- GA@fitnessValue
+
+        # Values of parameters to make simulation
+        values <- c(opt_parms, no_opt_parms)
+
+        # Names of parameters to make simulation
+        parameter_names_simulation <- c(names(opt_parms), names(no_opt_parms))
+        names(values) <- parameter_names_simulation
+
+        # Values of parameters and fitness
+        values_result <- c(values, fit_val)
+
+        # Names of parameters to show result
+        parameter_names_result <- c(opt_parm_names, names(no_opt_parms), "fitness value")
+
+        results_table <- data.frame("parameter" = parameter_names_result, "value" = values_result)
         
-        # Using GA to get parameters
-        parms_aux_opt <- ga(type = 'real-valued',
-                       fitness = function(parms) - cost_fun_opt(parms),
-                       lower = rep(0,length(p)),
-                       upper = 5*p,
-                       popSize = 50,
-                       pcrossover = 0.8,
-                       pmutation = 0.1,
-                       names = names(p),
-                       maxiter = 1, 
-                       maxFitness = -1000)
-        
-        opt_parms_aux_opt <- parms_aux_opt@solution %>% 
-                as.data.frame() %>% unlist()
-        
-        return(list("optimized_parameters" = opt_parms_aux_opt,
-                    "fitness_value" = parms_aux_opt@fitnessValue))
-        
+        ga_out <- list(
+                
+                names = c("Iterations", "Fitness function value", parameter_names_result),
+                
+                values = c(GA@iter, GA@fitnessValue, round(values_result,3))
+        )
+
+        results <- list(values = values, ga_out = ga_out, GA = GA)
+
+
+        return(results)
+        ######
 }
 
-# Fitness function #
-cost_fun_opt <- function(parms) {
+# Fitness function to get parameters ####
+fitness_fun_opt <- function(x, data, opt_parms, no_opt_parms) {
+
+        # This is required to define what parms is.
+        names(x) <- names(opt_parms)
+
+        n <- nrow(data)
         
-        names(parms) <- names(p)
-        simOut <- ode(y =  c(x = opt_data$x[1], p = opt_data$p[1], s = opt_data$s[1]),
-                      times = seq(0,60,4),
-                      func = model,
-                      parms = parms,
-                      method = "rk4")
-        modCost(simOut,opt_data)$model
+
+        # Simulate the model
+        sim_out <- ode(y =  c(x = data$x[1], p = data$p[1], s = data$s[1]),
+                       times = seq(data$time[1], data$time[n], data$time[2] - data$time[1]),
+                       func = model,
+                       parms = c(x, no_opt_parms),
+                       method = "rk4") %>% as.data.frame()
+
+
+        return(-modCost(sim_out, data)$model)
 }
 
-# Function to compare simulation using the optimized parameters and data #
-comp_fun_opt <- function(p) {
+
+# comp_fun_opt ####
+comp_fun_opt <- function(p, data) {
         
-        fitness <- ode(y = c(x = opt_data$x[1], p = opt_data$p[1], s = opt_data$s[1]),
-                       times = seq(0,60,4),
+        n <- nrow(data)
+        # Simulate the model with the optimized parameters
+        fitness <- ode(y = c(x = data$x[1], p = data$p[1], s = data$s[1]),
+                       times = seq(data$time[1], data$time[n], data$time[2] - data$time[1]),
                        func = model,
                        parms = p,
                        method = "rk4")
-        
         fitness <- as.data.frame(fitness)
-        
-        ggplot(data = fitness) + 
-                geom_line(mapping = aes(x = time, y = s, color = "s"), size=1.5) + 
-                geom_line(mapping = aes(x = time, y = x, color = "x"), size=1.5) +
-                geom_line(mapping = aes(x = time, y = p,color = "p"), size=1.5) +
-                geom_point(data = opt_data, mapping = aes(x = time, y = s, color = "s"),size=3) + 
-                geom_point(data = opt_data, mapping = aes(x = time, y = x, color = "x"),size=3) +
-                geom_point(data = opt_data, mapping = aes(x = time, y = p,color = "p"),size=3) +
-                labs(x = "time (h)", y = "concentration (g/L)")+
-                theme_bw()
-}
-##############################################################################################
-##### t-test section #########################################################################
-# This funtion makes the t-test
-make_sts_fun_sts <- function(data_ttest) {
-        
-        # Get level names
-        levels_data <- levels(data_ttest[,1])
-        
-        # The t-test
-        my_ttest <- t.test(data_ttest[,2] ~ data_ttest[,1]) 
+
+        # Plot the data and the simulation with the optimized parameters
+        ggplot(data = fitness) +
+                geom_line(mapping = aes(x = time, y = s, color = "s"), size = 1) +
+                geom_line(mapping = aes(x = time, y = x, color = "x"), size = 1) +
+                geom_line(mapping = aes(x = time, y = p,color = "p"), size = 1) +
+                geom_point(data = data, mapping = aes(x = time, y = s, color = "s"), size = 2) +
+                geom_point(data = data, mapping = aes(x = time, y = x, color = "x"), size = 2) +
+                geom_point(data = data, mapping = aes(x = time, y = p,color = "p"), size = 2) +
                 
-        data.frame(parameters = c("t statistic", "degrees of freedom", 
-                                   "p-value", "confidence interval min",
-                                   "confidence interval max", paste0("mean ",levels_data[1]),
-                                  paste0("mean ",levels_data[2]), "alternative hypothesis"),
-                    
-                    values = c(my_ttest$statistic, 
-                               my_ttest$parameter, my_ttest$p.value, 
-                               my_ttest$conf.int[1],my_ttest$conf.int[2], 
-                               my_ttest$estimate, "true difference in means is not equal to 0"))
-}
-
-
-# This funtion makes the ANOVA analysis
-make_anova_fun_anova <- function(data_anova) {
-        
-        model.lm <- lm(data_anova[,2] ~ data_anova[,1])
-        
-        anova(model.lm)
-}
-
-# This function makes the tukey test
-
-make_tukey_fun_tukey <- function(data_tukey) {
-        
-        model.lm <- lm(data_tukey[,2] ~ data_tukey[,1]) 
-        
-        my_anova <- aov(model.lm) 
-        
-        my_tukey <- TukeyHSD(my_anova)
+                labs(x = "Time (h)", y = "Concentration (g/L)", color = NULL) +
+                theme_bw() +
+                theme(
+                        axis.text = element_text(size = 10, face = "bold",
+                                                 colour = "black",hjust = "0.5",vjust = "1"),
                         
-        data.frame("differences" = my_tukey$`data_tukey[, 1]`[,1], "p adj" = my_tukey$`data_tukey[, 1]`[,4])
-        
-        
+                        axis.title.y = element_text(size = 15, angle = 90,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 1),
+                        
+                        axis.title.x = element_text(size = 15, angle = 0,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 0),
+                        legend.position  = "top",
+                        
+                        legend.justification  = "top",
+                        
+                        legend.title = element_text(size = 15, face = "bold"),
+                        
+                        legend.text = element_text(size = 15, colour = "black",face = "bold")
+                )
 }
 
-# This function makes a boxplot from a dataset
-make_boxplot_fun_sta <- function(data_bp) {
-        
-        # Get column names
-        nameDat <- colnames(data_bp)
-        
-        # Make boxplot
-        ggplot(data = data_bp) + 
-                
-                geom_boxplot(mapping = aes(x =  .data[[nameDat[[1]]]],
-                                           y = .data[[nameDat[[2]]]],
-                                           
-                                           color = .data[[nameDat[[1]]]]))
-        
+# plot_ga_fun_opt ####
+plot_ga_fun_opt <- function(ga) {
+
+        plot(ga)
 }
 
-# This function makes a scatter plot from a dataset
-make_scatter_fun_lr <- function(data_sp,varx,vary) {
+# Fed Batch process process subsection #####################
+# Function to plot fitness function ####
+plot_fitness_fun_fb_opt <- function(Vlim, sin, s, p, time, interval) {
         
-        # Make scatter plot
-        ggplot(data = data_sp, mapping = aes(x =  .data[[varx]],
-                                             
-                                             y = .data[[vary]])) + 
+        Q <- seq(interval[1], interval[2], length.out = 60)
+        
+        n <- length(Q)
+        
+        f1 <- numeric()
+        f2 <- numeric()
+        f <- numeric()
+        
+        for (i in 1:n) {
                 
-                geom_point() +
+                out_fit <- fitness_fun_fb_opt(x = Q[i], s, p, time)
                 
-                geom_smooth() +
+                f1 <- c(f1, out_fit[1])
                 
-                labs(title = "scatter plot", x = varx, 
-                     y = vary) +
+                f2 <- c(f2, out_fit[2])
                 
-                theme_bw()
-        
-}
-
-# This function makes linear regression analysis
-make_lr_fun_lr <- function(data_lr, ind_var_lr,dep_var_lr) {
-        
-        formula_aux_lr <- make_formula_fun_lr(ind_var_lr,dep_var_lr)
-        
-        mymodel <- lm(formula_aux_lr, data = data_lr)
-        
-        mysummary <- summary(mymodel)
-        
-        myparms <- mysummary$coefficients[,1]
-        
-        my_r_squared <- sqrt(mysummary$r.squared)
-        
-        my_result <- c(myparms, my_r_squared) %>% as.numeric()
-        
-        names_result <- c(names(myparms), "R")
-        
-        myresult <- data.frame("parameters"= names_result,"values"= my_result)
-        
-        return(myresult)
-        
-}
-
-make_formula_fun_lr <- function(ind_var_lr,dep_var_lr) {
-        
-        formula_aux_lr <- ind_var_lr[1]
-        
-        for (i in ind_var_lr[-1]) {
+                f <- c(f, out_fit[3])
                 
-                formula_aux_lr <- paste(formula_aux_lr,i,sep = "+")
         }
         
-        (formula_aux_lr <- paste(dep_var_lr,formula_aux_lr,sep = "~"))
+        df <- data.frame(
+                
+                Q = Q,
+                
+                Fitness = f,
+                
+                f1 = f1,
+                
+                f2 = f2
+        )
+        
+        ggplot(data = df, aes(x = Q)) +
+                
+                geom_line(aes(y = Fitness), color = "blue",  size = 1, alpha = 1/2) +
+                
+                geom_line(aes(y = f1), color = "green", size = 1, alpha = 1/2) +
+                
+                geom_line(aes(y = f2), color = "red", size = 1, alpha = 1/2) +
+                
+                theme_light() +
+                
+                theme(
+                        axis.text = element_text(size = 10, face = "bold",
+                                                 colour = "black",hjust = "0.5",vjust = "1"),
+                        
+                        axis.title.y = element_text(size = 10, angle = 90,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 1),
+                        
+                        axis.title.x = element_text(size = 10, angle = 0,
+                                                    face = "bold",colour = "black",
+                                                    hjust = 0.5, vjust = 0)
+                )
+}
+
+# Fitness function to get Q  ####
+fitness_fun_fb_opt <- function(x , s, p, time) {
+        
+        p[["Q"]] <- x
+        
+        out <- ode(y = s, 
+                   times = seq(0, time, 1),
+                   func = model_fb_fun_fb_sim,
+                   parms = p,
+                   method = "rk4") %>% as.data.frame()
+        
+        n <- nrow(out)
+        ind <- which(out$Q == 0)[1]
+        ind <- ifelse(is.na(ind), n, ind)
+        tf <- out$time[ind]
+        
+        f1 <- out$x[n]*out$V[n] + out$p[n]*out$V[n]
+        f2 <- p[["Q"]]*p[["sin"]]*(tf - 0)
+        f <- f1 - f2
+        
+        return(c(f1,f2,f))
+}
+
+fitness_fun_opt_fb_opt <- function(x, s, p, time) {
+        
+        f <- fitness_fun_fb_opt(x, s, p, time)
+        
+        f[3]
+}
+
+# get_Q_fun_fb_opt ####
+get_Q_fun_fb_opt <- function(pop_size, generations, cross_prob, mutation_prob, run, s, p, interval, time) {
+        
+        GA <- ga(type = "real-valued",
+                 fitness = fitness_fun_opt_fb_opt,
+                 s = s,
+                 p = p,
+                 time,
+                 lower = interval[1], 
+                 upper = interval[2], 
+                 popSize = pop_size, 
+                 maxiter = generations,
+                 pcrossover = cross_prob, 
+                 pmutation = mutation_prob,
+                 run = run)
+        
+        ga_out <- list(
+                
+                names = c( "Iterations", "Fitness function value", "Q"),
+                
+                values = c(GA@iter, round(c(GA@fitnessValue, GA@solution),3))
+        )
+        
+        results <- list(ga_out = ga_out, GA = GA)
+        
+        return(results)
         
 }
 
 
-make_result_anova_fun_anova <- function(my_anova) {
+# plot_ga_fun_fb_opt ####
+plot_ga_fun_fb_opt <- function(ga) {
         
-        data.frame("parameters" = c("degrees of freedom", "sum of squares",
-                                    "mean of squares","F value",
-                                    "Pr(>F)"),
-                   "Values" = c(paste(my_anova$Df[1],my_anova$Df[2],sep = " -- "),
-                                paste(round(my_anova$`Sum Sq`[1],5),round(my_anova$`Sum Sq`[2],5),sep = " -- "),
-                                paste(round(my_anova$`Mean Sq`[1],5),round(my_anova$`Mean Sq`[2],5),sep = " -- "), 
-                                round(my_anova$`F value`[1],5),
-                                round(my_anova$`Pr(>F)`[1],5)))
-}
-
-make_means_fun_anova <- function(data_means) {
-        
-        colnames_data <- colnames(data_means)
-        data_means %>%
-                group_by(.data[[colnames_data[1]]]) %>%
-                summarise(means = mean(.data[[colnames_data[2]]]))
+        plot(ga)
 }
