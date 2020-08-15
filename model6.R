@@ -27,3 +27,4 @@ p <- c(Vmax = 0.5, Ks = 80, Yxs = 0.8, alpha = 12, Kp = 180, beta = 0.1)
 s <- c(x = 0.2, p = 0, s = 20)
 
 ode(y = s,times = seq(1:60),func = model,parms = p)
+
